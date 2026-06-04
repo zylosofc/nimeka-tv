@@ -1,17 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Loader2, AlertCircle, Maximize2 } from "lucide-react";
+import { Loader2, AlertCircle } from "lucide-react";
 
-interface ServerItem {
-  title: string;
-  serverId: string;
-  href: string;
-}
-
-interface QualityServer {
-  title: string;
-  serverList: ServerItem[];
-}
-
+interface ServerItem { title: string; serverId: string; href: string; }
+interface QualityServer { title: string; serverList: ServerItem[]; }
 interface VideoPlayerProps {
   defaultUrl: string;
   qualities: QualityServer[];
@@ -23,21 +14,18 @@ const QUALITY_ORDER = ["1080p", "720p", "480p", "360p", "HD", "SD"];
 const PREFERRED_KEYWORDS = ["otakudesuhd", "ondesuhd", "desustream", "otakudesu", "neonime", "samehadaku"];
 
 function pickBestServer(qualities: QualityServer[]): ServerItem | null {
-  if (!qualities || qualities.length === 0) return null;
+  if (!qualities?.length) return null;
   const sorted = [...qualities].sort((a, b) => {
-    const ai = QUALITY_ORDER.indexOf(a.title);
-    const bi = QUALITY_ORDER.indexOf(b.title);
+    const ai = QUALITY_ORDER.indexOf(a.title), bi = QUALITY_ORDER.indexOf(b.title);
     if (ai === -1 && bi === -1) return 0;
-    if (ai === -1) return 1;
-    if (bi === -1) return -1;
+    if (ai === -1) return 1; if (bi === -1) return -1;
     return ai - bi;
   });
-  for (const q of sorted) {
+  for (const q of sorted)
     for (const kw of PREFERRED_KEYWORDS) {
       const s = q.serverList.find((s) => s.title.toLowerCase().includes(kw));
       if (s) return s;
     }
-  }
   return sorted[0]?.serverList?.[0] || null;
 }
 
@@ -47,9 +35,21 @@ async function fetchEmbedUrl(serverId: string): Promise<string | null> {
     if (!res.ok) return null;
     const json = await res.json();
     return json?.result?.data?.url || json?.data?.url || null;
-  } catch {
-    return null;
-  }
+  } catch { return null; }
+}
+
+function lockLandscape() {
+  try {
+    const orient = (window.screen as any).orientation;
+    if (orient?.lock) orient.lock("landscape").catch(() => {});
+  } catch {}
+}
+
+function unlockOrientation() {
+  try {
+    const orient = (window.screen as any).orientation;
+    if (orient?.unlock) orient.unlock();
+  } catch {}
 }
 
 export default function VideoPlayer({ defaultUrl, qualities, startAtSeconds = 0, onProgress }: VideoPlayerProps) {
@@ -59,31 +59,26 @@ export default function VideoPlayer({ defaultUrl, qualities, startAtSeconds = 0,
   const [error, setError] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const progressTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const startTimeRef = useRef<number>(Date.now());
-  const accumulatedRef = useRef<number>(startAtSeconds);
+  const startTimeRef = useRef(Date.now());
+  const accumulatedRef = useRef(startAtSeconds);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Progress tracking
   useEffect(() => {
     if (!onProgress || loading || error) return;
     startTimeRef.current = Date.now();
-    progressTimerRef.current = setInterval(() => {
-      const elapsed = (Date.now() - startTimeRef.current) / 1000;
-      onProgress(Math.floor(accumulatedRef.current + elapsed));
+    timerRef.current = setInterval(() => {
+      onProgress(Math.floor(accumulatedRef.current + (Date.now() - startTimeRef.current) / 1000));
     }, 5000);
     return () => {
-      if (progressTimerRef.current) {
-        clearInterval(progressTimerRef.current);
-        const elapsed = (Date.now() - startTimeRef.current) / 1000;
-        accumulatedRef.current += elapsed;
-      }
+      if (timerRef.current) clearInterval(timerRef.current);
+      accumulatedRef.current += (Date.now() - startTimeRef.current) / 1000;
     };
   }, [loading, error, onProgress]);
 
+  // Load embed URL
   useEffect(() => {
-    setLoading(true);
-    setError(false);
-    setEmbedUrl(null);
+    setLoading(true); setError(false); setEmbedUrl(null);
     accumulatedRef.current = startAtSeconds;
     async function load() {
       if (best?.serverId) {
@@ -91,55 +86,19 @@ export default function VideoPlayer({ defaultUrl, qualities, startAtSeconds = 0,
         if (url) { setEmbedUrl(url); return; }
       }
       if (defaultUrl) { setEmbedUrl(defaultUrl); return; }
-      setError(true);
-      setLoading(false);
+      setError(true); setLoading(false);
     }
     load();
   }, [qualities, defaultUrl, startAtSeconds]); // eslint-disable-line
 
-  // Fullscreen → force landscape on mobile
-  const handleFullscreen = useCallback(() => {
-    const iframe = iframeRef.current;
-    const wrapper = wrapperRef.current;
-    if (!iframe || !wrapper) return;
-
-    // Coba lock orientation ke landscape
-    const lockLandscape = () => {
-      try {
-        const screen = window.screen as Screen & {
-          orientation?: { lock?: (o: string) => Promise<void> };
-        };
-        if (screen.orientation?.lock) {
-          screen.orientation.lock("landscape").catch(() => {});
-        }
-      } catch {}
-    };
-
-    // Fullscreen API - prefer iframe fullscreen agar overlay hilang
-    if (iframe.requestFullscreen) {
-      iframe.requestFullscreen().then(lockLandscape).catch(() => {
-        // fallback: fullscreen wrapper div
-        wrapper.requestFullscreen?.().then(lockLandscape).catch(() => {});
-      });
-    } else if ((iframe as HTMLIFrameElement & { webkitRequestFullscreen?: () => void }).webkitRequestFullscreen) {
-      (iframe as HTMLIFrameElement & { webkitRequestFullscreen?: () => void }).webkitRequestFullscreen?.();
-      lockLandscape();
-    } else if ((wrapper as HTMLDivElement & { webkitRequestFullscreen?: () => void }).webkitRequestFullscreen) {
-      (wrapper as HTMLDivElement & { webkitRequestFullscreen?: () => void }).webkitRequestFullscreen?.();
-      lockLandscape();
-    }
-  }, []);
-
-  // Listen fullscreenchange to unlock orientation when exiting
+  // Intercept fullscreen change — kalau iframe/wrapper masuk fullscreen, lock landscape
   useEffect(() => {
     const onFsChange = () => {
-      if (!document.fullscreenElement) {
-        try {
-          const screen = window.screen as Screen & {
-            orientation?: { unlock?: () => void };
-          };
-          screen.orientation?.unlock?.();
-        } catch {}
+      const fsEl = document.fullscreenElement || (document as any).webkitFullscreenElement;
+      if (fsEl) {
+        lockLandscape();
+      } else {
+        unlockOrientation();
       }
     };
     document.addEventListener("fullscreenchange", onFsChange);
@@ -148,6 +107,21 @@ export default function VideoPlayer({ defaultUrl, qualities, startAtSeconds = 0,
       document.removeEventListener("fullscreenchange", onFsChange);
       document.removeEventListener("webkitfullscreenchange", onFsChange);
     };
+  }, []);
+
+  // Custom fullscreen handler — klik tombol expand kustom kita
+  const handleExpand = useCallback(() => {
+    const iframe = iframeRef.current;
+    const wrapper = wrapperRef.current;
+    const target = iframe || wrapper;
+    if (!target) return;
+    if ((target as any).requestFullscreen) {
+      (target as any).requestFullscreen().catch(() => {});
+    } else if ((target as any).webkitRequestFullscreen) {
+      (target as any).webkitRequestFullscreen();
+    }
+    // lock langsung juga, tidak hanya di event handler
+    setTimeout(lockLandscape, 100);
   }, []);
 
   return (
@@ -176,13 +150,15 @@ export default function VideoPlayer({ defaultUrl, qualities, startAtSeconds = 0,
             title="Video Player"
             onLoad={() => setLoading(false)}
           />
-          {/* Custom fullscreen button - tampil saat hover */}
+          {/* Tombol fullscreen overlay — muncul saat hover di atas video */}
           <button
-            onClick={handleFullscreen}
-            className="absolute bottom-3 right-3 z-20 p-2 bg-black/60 hover:bg-black/80 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm"
-            title="Layar Penuh (Landscape)"
+            onClick={handleExpand}
+            className="absolute bottom-2.5 right-2.5 z-20 p-2 bg-black/50 hover:bg-black/80 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm"
+            title="Layar Penuh"
           >
-            <Maximize2 className="w-4 h-4" />
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+            </svg>
           </button>
         </>
       )}
