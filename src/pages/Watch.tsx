@@ -144,18 +144,19 @@ export default function Watch() {
         {/* ── BANNER (poster + play + episode number) ── */}
         <div className="mt-4 rounded-2xl overflow-hidden bg-[#1a1a2e] border border-white/5">
 
-          {/* Banner area */}
-          <div className="relative w-full" style={{ height: 200 }}>
+          {/* Banner area - poster dengan blur bg, jelas beda dari player */}
+          <div className="relative w-full bg-[#0f0f1a]" style={{ height: 200 }}>
             {poster ? (
               <>
-                {/* BG blur */}
+                {/* BG blur full */}
                 <img src={poster} alt="" aria-hidden loading="lazy"
                   className="absolute inset-0 w-full h-full object-cover"
-                  style={{ filter: "blur(2px) brightness(0.55)", transform: "scale(1.05)" }} />
-                {/* Poster tajam tengah */}
-                <img src={poster} alt={title} loading="lazy"
-                  className="absolute inset-0 w-full h-full object-cover"
-                  style={{ objectPosition: "center top" }} />
+                  style={{ filter: "blur(24px) brightness(0.3)", transform: "scale(1.1)" }} />
+                {/* Poster portrait di tengah, tidak full width */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <img src={poster} alt={title} loading="lazy"
+                    className="h-full max-w-[140px] object-contain rounded-lg shadow-2xl" />
+                </div>
               </>
             ) : (
               <div className="absolute inset-0 bg-gradient-to-br from-purple-900/40 to-[#0f0f1a] flex items-center justify-center">
