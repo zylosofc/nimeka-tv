@@ -6,7 +6,7 @@ import VideoPlayer from "@/components/VideoPlayer";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import {
   ArrowLeft, ArrowRight, ChevronLeft, ChevronRight,
-  Tv, Star, Bookmark, Heart, Play, Trophy, Users, Clock, Film
+  Star, Bookmark, Heart, Trophy, Users, Clock, Film
 } from "lucide-react";
 import { useRef, useEffect, useCallback, useState } from "react";
 import { saveWatchProgress, getWatchProgress } from "@/hooks/useWatchHistory";
@@ -141,62 +141,8 @@ export default function Watch() {
           />
         )}
 
-        {/* ── BANNER (poster + play + episode number) ── */}
+        {/* ── INFO CARD ── */}
         <div className="mt-4 rounded-2xl overflow-hidden bg-[#1a1a2e] border border-white/5">
-
-          {/* Banner area - poster dengan blur bg, jelas beda dari player */}
-          <div className="relative w-full bg-[#0f0f1a]" style={{ height: 200 }}>
-            {poster ? (
-              <>
-                {/* BG blur full */}
-                <img src={poster} alt="" aria-hidden loading="lazy"
-                  className="absolute inset-0 w-full h-full object-cover"
-                  style={{ filter: "blur(24px) brightness(0.3)", transform: "scale(1.1)" }} />
-                {/* Poster portrait di tengah, tidak full width */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <img src={poster} alt={title} loading="lazy"
-                    className="h-full max-w-[140px] object-contain rounded-lg shadow-2xl" />
-                </div>
-              </>
-            ) : (
-              <div className="absolute inset-0 bg-gradient-to-br from-purple-900/40 to-[#0f0f1a] flex items-center justify-center">
-                <Tv className="w-14 h-14 text-gray-700" />
-              </div>
-            )}
-
-            {/* Overlay gradient */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-
-            {/* Play button center */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
-              <div className="w-14 h-14 rounded-full bg-purple-600/90 flex items-center justify-center shadow-xl shadow-purple-900/50 backdrop-blur-sm">
-                <Play className="w-6 h-6 text-white fill-white ml-0.5" />
-              </div>
-              {episode.eps && (
-                <span className="text-sm font-bold text-white drop-shadow">
-                  Episode {episode.eps}
-                </span>
-              )}
-            </div>
-
-            {/* Prev/Next overlay buttons */}
-            <div className="absolute bottom-3 left-3 right-3 flex justify-between">
-              {episode.hasPrevEpisode && episode.prevEpisode ? (
-                <button onClick={() => navigate(`/watch/${episode.prevEpisode.episodeId}`)}
-                  className="flex items-center gap-1 px-3 py-1.5 bg-black/50 backdrop-blur-sm text-white text-xs rounded-lg border border-white/10">
-                  <ArrowLeft className="w-3.5 h-3.5" />Sebelumnya
-                </button>
-              ) : <div />}
-              {episode.hasNextEpisode && episode.nextEpisode ? (
-                <button onClick={() => navigate(`/watch/${episode.nextEpisode.episodeId}`)}
-                  className="flex items-center gap-1 px-3 py-1.5 bg-purple-600/80 backdrop-blur-sm text-white text-xs rounded-lg">
-                  Selanjutnya<ArrowRight className="w-3.5 h-3.5" />
-                </button>
-              ) : <div />}
-            </div>
-          </div>
-
-          {/* ── POSTER KECIL + JUDUL + BADGE ── */}
           <div className="px-3 pt-3 pb-2 flex gap-3 items-start">
             {/* Poster kecil */}
             <Link to={animeId ? `/anime/${animeId}` : "/"} className="flex-shrink-0">
