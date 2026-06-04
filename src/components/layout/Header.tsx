@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router";
-import { Search, Menu, Tv } from "lucide-react";
+import { Search, Menu } from "lucide-react";
 import { useState } from "react";
 
 export default function Header() {
@@ -10,7 +10,11 @@ export default function Header() {
     <header className="sticky top-0 z-50 bg-[#0f0f1a]/95 backdrop-blur-lg border-b border-white/10">
       <div className="flex items-center justify-between h-14 px-4 max-w-7xl mx-auto">
         <Link to="/" className="flex items-center gap-2">
-          <Tv className="w-6 h-6 text-purple-500" />
+          <img
+            src="https://files.catbox.moe/qa2ajw.jpg"
+            alt="Nimeka TV"
+            className="w-7 h-7 rounded-md object-cover"
+          />
           <span className="text-xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
             Nimeka TV
           </span>
@@ -40,7 +44,6 @@ export default function Header() {
         </div>
       </div>
 
-      {/* Mobile menu */}
       {menuOpen && (
         <div className="md:hidden bg-[#1a1a2e] border-t border-white/10 px-4 py-3 space-y-2">
           <Link to="/" onClick={() => setMenuOpen(false)} className="block py-2 text-gray-300 hover:text-white">Beranda</Link>

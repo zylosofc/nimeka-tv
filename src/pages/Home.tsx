@@ -99,7 +99,7 @@ export default function Home() {
         {/* Footer */}
         <footer className="text-center py-8 text-xs text-gray-500">
           <p>Nimeka TV - Nonton Anime Subtitle Indonesia Gratis</p>
-          <p className="mt-1">Powered by Sanka API</p>
+          <p className="mt-1">Powered by Hiyori Senpaii</p>
         </footer>
       </main>
 

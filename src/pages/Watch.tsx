@@ -16,6 +16,8 @@ import {
   Users,
   Clock,
   Film,
+  Download,
+  ChevronDown,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState, useRef, useEffect } from "react";
@@ -27,6 +29,7 @@ type TabType = "info" | "komentar";
 export default function Watch() {
   const { slug } = useParams<{ slug: string }>();
   const [activeTab, setActiveTab] = useState<TabType>("info");
+  const [showDownloads, setShowDownloads] = useState(false);
   const episodeScrollRef = useRef<HTMLDivElement>(null);
 
   const { data, isLoading } = trpc.anime.episode.useQuery(
@@ -37,7 +40,6 @@ export default function Watch() {
   const episode = data as any;
   const info = episode?.info as any;
 
-  // Scroll active episode into view in episode list
   useEffect(() => {
     if (episodeScrollRef.current) {
       const active = episodeScrollRef.current.querySelector("[data-active='true']");
@@ -45,7 +47,7 @@ export default function Watch() {
         active.scrollIntoView({ block: "nearest", inline: "center", behavior: "smooth" });
       }
     }
-  }, [episode]);
+  }, [slug, episode]);
 
   if (isLoading) {
     return (
@@ -75,9 +77,6 @@ export default function Watch() {
   const qualities = episode.server?.qualities || [];
   const downloadQualities = episode.downloadUrl?.qualities || [];
   const episodeList: any[] = info?.episodeList || [];
-
-  // Current episode number from title or slug
-  const currentEpsNum = episode.title?.match(/(\d+)/)?.[1] ?? null;
 
   return (
     <div className="min-h-screen bg-[#0f0f1a] text-white pb-24">
@@ -110,7 +109,6 @@ export default function Watch() {
           <VideoPlayer
             defaultUrl={episode.defaultStreamingUrl}
             qualities={qualities}
-            downloadQualities={downloadQualities}
           />
         </motion.div>
 
@@ -160,11 +158,17 @@ export default function Watch() {
             {/* Poster */}
             <Link to={`/anime/${episode.animeId}`} className="flex-shrink-0">
               <div className="w-16 h-20 sm:w-20 sm:h-[104px] rounded-xl overflow-hidden bg-gray-800 border border-white/10 shadow-lg">
-                <img
-                  src={info.poster}
-                  alt={info.title}
-                  className="w-full h-full object-cover"
-                />
+                {info.poster ? (
+                  <img
+                    src={info.poster}
+                    alt={info.title}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <Tv className="w-6 h-6 text-gray-600" />
+                  </div>
+                )}
               </div>
             </Link>
 
@@ -176,7 +180,6 @@ export default function Watch() {
                 </h2>
               </Link>
 
-              {/* Score + Badges */}
               <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
                 {info.score && (
                   <span className="flex items-center gap-0.5 text-[11px] px-2 py-0.5 bg-yellow-500/15 text-yellow-400 rounded-md border border-yellow-500/20 font-medium">
@@ -196,7 +199,6 @@ export default function Watch() {
                 )}
               </div>
 
-              {/* Stats row */}
               <div className="flex items-center gap-3 mt-2">
                 {info.episodes > 0 && (
                   <span className="flex items-center gap-1 text-[11px] text-gray-400">
@@ -218,7 +220,6 @@ export default function Watch() {
                 )}
               </div>
 
-              {/* Action buttons */}
               <div className="flex items-center gap-2 mt-2.5">
                 <button className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 text-[11px] transition-colors border border-white/10">
                   <Bookmark className="w-3.5 h-3.5" />
@@ -233,7 +234,7 @@ export default function Watch() {
           </motion.div>
         )}
 
-        {/* Episode List — number buttons */}
+        {/* Episode List */}
         {episodeList.length > 0 && (
           <motion.section
             initial={{ opacity: 0, y: 12 }}
@@ -246,21 +247,13 @@ export default function Watch() {
               <div className="flex items-center gap-1 text-xs text-gray-500">
                 <span>{episodeList.length} eps</span>
                 <button
-                  onClick={() => {
-                    if (episodeScrollRef.current) {
-                      episodeScrollRef.current.scrollLeft -= 160;
-                    }
-                  }}
+                  onClick={() => { if (episodeScrollRef.current) episodeScrollRef.current.scrollLeft -= 160; }}
                   className="p-0.5 rounded hover:bg-white/10 transition-colors"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
                 <button
-                  onClick={() => {
-                    if (episodeScrollRef.current) {
-                      episodeScrollRef.current.scrollLeft += 160;
-                    }
-                  }}
+                  onClick={() => { if (episodeScrollRef.current) episodeScrollRef.current.scrollLeft += 160; }}
                   className="p-0.5 rounded hover:bg-white/10 transition-colors"
                 >
                   <ChevronRight className="w-4 h-4" />
@@ -279,6 +272,7 @@ export default function Watch() {
                     key={ep.episodeId}
                     to={`/watch/${ep.episodeId}`}
                     data-active={isActive}
+                    replace
                   >
                     <div
                       className={`
@@ -299,6 +293,47 @@ export default function Watch() {
           </motion.section>
         )}
 
+        {/* Download Section */}
+        {downloadQualities.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.22 }}
+            className="mt-4 bg-[#1a1a2e] rounded-xl overflow-hidden"
+          >
+            <button
+              onClick={() => setShowDownloads(!showDownloads)}
+              className="flex items-center justify-between w-full p-4 hover:bg-white/5 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <Download className="w-4 h-4 text-purple-400" />
+                <span className="text-sm font-medium text-gray-200">Link Download</span>
+              </div>
+              <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${showDownloads ? "rotate-180" : ""}`} />
+            </button>
+            {showDownloads && (
+              <div className="px-4 pb-4 space-y-3">
+                {downloadQualities.map((dq: any) => (
+                  <div key={dq.title}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-xs font-medium text-purple-400">{dq.title}</span>
+                      <span className="text-[10px] text-gray-500">({dq.size})</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {dq.urls.map((u: any) => (
+                        <a key={u.title} href={u.url} target="_blank" rel="noopener noreferrer"
+                          className="px-3 py-1.5 text-xs bg-gray-800 text-gray-300 rounded-lg hover:bg-purple-600 hover:text-white transition-all">
+                          {u.title}
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </motion.div>
+        )}
+
         {/* Tabs: Info / Komentar */}
         {info && (
           <motion.div
@@ -307,53 +342,38 @@ export default function Watch() {
             transition={{ delay: 0.25 }}
             className="mt-5"
           >
-            {/* Tab Header */}
             <div className="flex border-b border-white/10">
               {(["info", "komentar"] as TabType[]).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`
-                    relative px-5 py-2.5 text-sm font-medium capitalize transition-colors
-                    ${activeTab === tab ? "text-white" : "text-gray-500 hover:text-gray-300"}
-                  `}
+                  className={`relative px-5 py-2.5 text-sm font-medium capitalize transition-colors
+                    ${activeTab === tab ? "text-white" : "text-gray-500 hover:text-gray-300"}`}
                 >
                   {tab.charAt(0).toUpperCase() + tab.slice(1)}
                   {activeTab === tab && (
-                    <motion.div
-                      layoutId="tabUnderline"
-                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-purple-500 rounded-full"
-                    />
+                    <motion.div layoutId="tabUnderline" className="absolute bottom-0 left-0 right-0 h-0.5 bg-purple-500 rounded-full" />
                   )}
                 </button>
               ))}
             </div>
 
-            {/* Tab Content */}
             <div className="pt-4">
               {activeTab === "info" && (
                 <div className="space-y-4">
-                  {/* Genres */}
                   {info.genreList?.length > 0 && (
                     <div className="flex flex-wrap gap-2">
                       {info.genreList.map((g: any) => (
-                        <Link
-                          key={g.genreId}
-                          to={`/genre/${g.genreId}`}
-                          className="text-xs px-3 py-1 bg-purple-600/10 text-purple-300 rounded-full border border-purple-500/20 hover:bg-purple-600/20 transition-colors"
-                        >
+                        <Link key={g.genreId} to={`/genre/${g.genreId}`}
+                          className="text-xs px-3 py-1 bg-purple-600/10 text-purple-300 rounded-full border border-purple-500/20 hover:bg-purple-600/20 transition-colors">
                           {g.title}
                         </Link>
                       ))}
                     </div>
                   )}
-
-                  {/* Synopsis */}
                   {info.synopsis?.paragraphs?.length > 0 && (
                     <div>
-                      <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-                        Sinopsis
-                      </h3>
+                      <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Sinopsis</h3>
                       <div className="text-sm text-gray-400 leading-relaxed space-y-2">
                         {info.synopsis.paragraphs.slice(0, 2).map((p: string, i: number) => (
                           <p key={i}>{p}</p>
@@ -361,16 +381,11 @@ export default function Watch() {
                       </div>
                     </div>
                   )}
-
-                  {/* Release time */}
                   {episode.releaseTime && (
-                    <p className="text-xs text-gray-500">
-                      Rilis: {episode.releaseTime}
-                    </p>
+                    <p className="text-xs text-gray-500">Rilis: {episode.releaseTime}</p>
                   )}
                 </div>
               )}
-
               {activeTab === "komentar" && (
                 <div className="py-8 text-center">
                   <p className="text-gray-500 text-sm">Komentar belum tersedia</p>

@@ -83,11 +83,11 @@ export default function AnimeDetail() {
             {/* Watch First Episode Button */}
             {anime.episodeList?.length > 0 && (
               <Link
-                to={`/watch/${anime.episodeList[anime.episodeList.length - 1].episodeId}`}
+                to={`/watch/${anime.episodeList[0].episodeId}`}
                 className="flex items-center justify-center gap-2 w-full mt-3 px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium rounded-xl transition-colors"
               >
                 <Play className="w-4 h-4" fill="white" />
-                Tonton Episode Terbaru
+                Tonton Episode Pertama
               </Link>
             )}
 
