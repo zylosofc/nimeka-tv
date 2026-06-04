@@ -53,22 +53,28 @@ export default function Watch() {
   const genreList: any[] = info?.genreList || info?.genres || [];
   const episodeList: any[] = info?.episodeList || episode?.episodeList || [];
 
-  // Fetch detail sebagai fallback poster
+  // Fetch detail - selalu fetch untuk dapat totalEps, poster jadi bonus
   const { data: detailData } = trpc.anime.detail.useQuery(
     { slug: animeId },
-    { enabled: !!animeId && !posterFromEpisode }
+    { enabled: !!animeId }
   );
   const det = detailData as any;
   const posterFallback = det?.poster || det?.thumbnail || det?.image || det?.cover || "";
   const poster = posterFromEpisode || posterFallback;
 
+  // Eps yang lagi ditonton — cari dari episodeList berdasarkan slug aktif
+  const currentEpFromList = episodeList.find((e: any) => e.episodeId === slug);
+  const currentEps = episode?.eps || currentEpFromList?.eps || currentEpFromList?.episodeNumber || "-";
+
+  // Total episode dari detail API (paling akurat), fallback ke info, lalu episodeList
+  const totalEps = det?.episodes || det?.totalEpisodes || det?.episodeCount
+    || info?.episodes || info?.totalEpisodes
+    || (episodeList.length > 0 ? episodeList.length : null);
+
   // Stats dari API
-  const score   = info?.score ?? det?.score ?? null;
-  const views   = info?.members ?? info?.views ?? info?.totalViews ?? det?.members ?? det?.views ?? null;
-  const rank    = info?.rank ?? det?.rank ?? null;
-  const member  = info?.member ?? det?.member ?? null;
+  const score    = info?.score ?? det?.score ?? null;
+  const views    = info?.members ?? info?.views ?? info?.totalViews ?? det?.members ?? det?.views ?? null;
   const duration = info?.duration ?? det?.duration ?? null;
-  const totalEps = info?.episodes ?? det?.episodes ?? null;
   const qualities = episode?.server?.qualities || [];
 
   useEffect(() => {
@@ -213,7 +219,7 @@ export default function Watch() {
           {/* ── STATS GRID (4 kolom) ── */}
           <div className="mx-3 mb-3 grid grid-cols-4 divide-x divide-white/5 bg-[#0f0f1a] rounded-xl border border-white/5 overflow-hidden">
             {[
-              { icon: <Film className="w-4 h-4" />, label: "Episode", value: episode.eps ?? "-" },
+              { icon: <Film className="w-4 h-4" />, label: "Episode", value: currentEps },
               { icon: <Trophy className="w-4 h-4" />, label: "Total Eps", value: totalEps ?? (episodeList.length > 0 ? episodeList.length : "-") },
               { icon: <Users className="w-4 h-4" />, label: "Resolusi", value: (episode.defaultQuality || qualities?.[0]?.title || "-") },
               { icon: <Clock className="w-4 h-4" />, label: "Durasi", value: duration ?? "-" },
