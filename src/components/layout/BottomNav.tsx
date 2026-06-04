@@ -1,13 +1,13 @@
 import { Link, useLocation } from "react-router";
-import { Home, Search, Calendar, Tv, Compass } from "lucide-react";
+import { Home, Search, Calendar, Tv } from "lucide-react";
 import { motion } from "framer-motion";
 
+// Genre dihapus dari navbar - dipindah ke Search page
 const navItems = [
   { path: "/", label: "Beranda", icon: Home },
   { path: "/search", label: "Cari", icon: Search },
   { path: "/schedule", label: "Jadwal", icon: Calendar },
   { path: "/anime", label: "Anime", icon: Tv },
-  { path: "/genres", label: "Genre", icon: Compass },
 ];
 
 export default function BottomNav() {
@@ -35,16 +35,10 @@ export default function BottomNav() {
                 />
               )}
               <item.icon
-                className={`w-5 h-5 transition-colors ${
-                  isActive ? "text-purple-400" : "text-gray-500"
-                }`}
+                className={`w-5 h-5 transition-colors ${isActive ? "text-purple-400" : "text-gray-500"}`}
                 strokeWidth={isActive ? 2.5 : 1.5}
               />
-              <span
-                className={`text-[10px] mt-0.5 transition-colors ${
-                  isActive ? "text-purple-400 font-medium" : "text-gray-500"
-                }`}
-              >
+              <span className={`text-[10px] mt-0.5 transition-colors ${isActive ? "text-purple-400 font-medium" : "text-gray-500"}`}>
                 {item.label}
               </span>
             </Link>

@@ -18,11 +18,32 @@ async function fetchSanka(path: string): Promise<any> {
   return res.json();
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function extractArray(data: any): any[] {
+  if (!data) return [];
+  if (Array.isArray(data)) return data;
+  if (typeof data !== "object") return [];
+  for (const key of ["animeList", "list", "items", "data", "genreList", "genres", "results"]) {
+    if (Array.isArray(data[key])) return data[key];
+  }
+  const values = Object.values(data);
+  for (const v of values) {
+    if (Array.isArray(v) && (v as unknown[]).length > 0) return v as unknown[];
+  }
+  return [];
+}
+
 export const animeRouter = createRouter({
-  // Home - get ongoing anime list
+  // Home - returns { ongoing, completed, newUpdate, hot }
   home: publicQuery.query(async () => {
     const result = await fetchSanka("/anime/home");
-    return result.data?.ongoing?.animeList || [];
+    const d = result.data || {};
+    return {
+      ongoing: d.ongoing?.animeList || [],
+      completed: d.completed?.animeList || d.completeAnime?.animeList || [],
+      newUpdate: d.newUpdate?.animeList || d.latestUpdate?.animeList || d.recent?.animeList || [],
+      hot: d.hot?.animeList || d.popular?.animeList || d.topAnime?.animeList || [],
+    };
   }),
 
   // Schedule - weekly release schedule
@@ -37,7 +58,7 @@ export const animeRouter = createRouter({
     .query(async ({ input }) => {
       const encoded = encodeURIComponent(input.keyword);
       const result = await fetchSanka(`/anime/search/${encoded}`);
-      return result.data || [];
+      return extractArray(result.data);
     }),
 
   // Ongoing anime list
@@ -46,7 +67,7 @@ export const animeRouter = createRouter({
     .query(async ({ input }) => {
       const page = input?.page || 1;
       const result = await fetchSanka(`/anime/ongoing-anime?page=${page}`);
-      return result.data || [];
+      return extractArray(result.data);
     }),
 
   // Completed anime list
@@ -55,24 +76,23 @@ export const animeRouter = createRouter({
     .query(async ({ input }) => {
       const page = input?.page || 1;
       const result = await fetchSanka(`/anime/complete-anime?page=${page}`);
-      return result.data || [];
+      return extractArray(result.data);
     }),
 
-  // Genre list - try multiple response shapes
+  // Genre list
   genres: publicQuery.query(async () => {
     const result = await fetchSanka("/anime/genre");
-    // Handle berbagai shape response
-    const data = result.data;
-    if (!data) return [];
-    if (Array.isArray(data)) return data;
-    if (Array.isArray(data.genreList)) return data.genreList;
-    if (Array.isArray(data.genres)) return data.genres;
-    // Jika data adalah object dengan keys genre
-    if (typeof data === "object") {
-      const vals = Object.values(data);
-      if (vals.length > 0 && Array.isArray(vals[0])) return vals[0] as unknown[];
-    }
-    return [];
+    const raw = extractArray(result.data);
+    // Deduplicate by id/slug
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const seen = new Set<string>();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return raw.filter((g: any) => {
+      const key = String(g.genreId || g.slug || g.id || g.title || g.name || "");
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
   }),
 
   // Anime by genre
@@ -81,7 +101,7 @@ export const animeRouter = createRouter({
     .query(async ({ input }) => {
       const page = input.page || 1;
       const result = await fetchSanka(`/anime/genre/${input.slug}?page=${page}`);
-      return result.data || [];
+      return extractArray(result.data);
     }),
 
   // Anime detail
@@ -122,6 +142,6 @@ export const animeRouter = createRouter({
     .query(async ({ input }) => {
       const page = input?.page || 1;
       const result = await fetchSanka(`/anime/unlimited?page=${page}`);
-      return result.data || [];
+      return extractArray(result.data);
     }),
 });
