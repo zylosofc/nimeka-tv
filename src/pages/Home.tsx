@@ -49,7 +49,7 @@ export default function Home() {
           ) : (
             <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
               {ongoing.map((anime: AnimeItem, i: number) => (
-                <AnimeCard key={anime.animeId} anime={anime} index={i} />
+                <AnimeCard key={anime.animeId} anime={anime} index={i} variant="grid" />
               ))}
             </div>
           )}
@@ -88,9 +88,9 @@ export default function Home() {
           {ongoingLoading ? (
             <SkeletonCard count={6} />
           ) : (
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 sm:gap-4">
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 sm:gap-3">
               {ongoing.slice(5, 17).map((anime: AnimeItem, i: number) => (
-                <AnimeCard key={anime.animeId} anime={anime} index={i} />
+                <AnimeCard key={anime.animeId} anime={anime} index={i} variant="grid" />
               ))}
             </div>
           )}
