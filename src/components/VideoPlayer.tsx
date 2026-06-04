@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Download, ChevronDown, Loader2 } from "lucide-react";
+import { Download, ChevronDown, Loader2, AlertCircle } from "lucide-react";
 
 interface ServerItem {
   title: string;
@@ -23,15 +23,14 @@ interface VideoPlayerProps {
 }
 
 // Priority: highest resolution first
-const QUALITY_ORDER = ["1080p", "720p", "480p", "360p", "SD", "HD"];
+const QUALITY_ORDER = ["1080p", "720p", "480p", "360p", "HD", "SD"];
 
-// Preferred server name (case-insensitive match)
-const PREFERRED_SERVER = "otakudesuhd";
+// Preferred server keywords (case-insensitive)
+const PREFERRED_SERVER_KEYWORDS = ["otakudesuhd", "ondesuhd", "desustream", "otakudesu"];
 
-function pickBestUrl(qualities: QualityServer[]): { url: string; qualityLabel: string; serverLabel: string } | null {
+function pickBestServer(qualities: QualityServer[]): { server: ServerItem; qualityLabel: string } | null {
   if (!qualities || qualities.length === 0) return null;
 
-  // Sort qualities by priority
   const sorted = [...qualities].sort((a, b) => {
     const ai = QUALITY_ORDER.indexOf(a.title);
     const bi = QUALITY_ORDER.indexOf(b.title);
@@ -41,66 +40,101 @@ function pickBestUrl(qualities: QualityServer[]): { url: string; qualityLabel: s
     return ai - bi;
   });
 
-  // For each quality (highest first), try to find preferred server
+  // Try preferred server in each quality (highest first)
   for (const q of sorted) {
-    const preferred = q.serverList.find(
-      (s) => s.title.toLowerCase().includes(PREFERRED_SERVER)
-    );
-    if (preferred) {
-      return {
-        url: `https://www.sankavollerei.com/anime/server/${preferred.serverId}`,
-        qualityLabel: q.title,
-        serverLabel: preferred.title,
-      };
+    for (const keyword of PREFERRED_SERVER_KEYWORDS) {
+      const preferred = q.serverList.find(
+        (s) => s.title.toLowerCase().includes(keyword)
+      );
+      if (preferred) {
+        return { server: preferred, qualityLabel: q.title };
+      }
     }
   }
 
-  // Fallback: just take the first server of highest quality
+  // Fallback: first server of highest quality
   const first = sorted[0];
   if (first?.serverList?.[0]) {
-    return {
-      url: `https://www.sankavollerei.com/anime/server/${first.serverList[0].serverId}`,
-      qualityLabel: first.title,
-      serverLabel: first.serverList[0].title,
-    };
+    return { server: first.serverList[0], qualityLabel: first.title };
   }
 
   return null;
 }
 
+async function fetchEmbedUrl(serverId: string): Promise<string | null> {
+  try {
+    const res = await fetch(`/trpc/anime.server?input=${encodeURIComponent(JSON.stringify({ serverId }))}`);
+    if (!res.ok) return null;
+    const json = await res.json();
+    // tRPC response shape: { result: { data: { url: "..." } } }
+    const url = json?.result?.data?.url || json?.data?.url || null;
+    return url;
+  } catch {
+    return null;
+  }
+}
+
 export default function VideoPlayer({ defaultUrl, qualities, downloadQualities }: VideoPlayerProps) {
-  const best = pickBestUrl(qualities);
-  const [videoUrl, setVideoUrl] = useState(best?.url || defaultUrl);
-  const [showDownloads, setShowDownloads] = useState(false);
+  const best = pickBestServer(qualities);
+  const [embedUrl, setEmbedUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [showDownloads, setShowDownloads] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
-    const newBest = pickBestUrl(qualities);
-    if (newBest) setVideoUrl(newBest.url);
-    else if (defaultUrl) setVideoUrl(defaultUrl);
     setLoading(true);
+    setError(false);
+    setEmbedUrl(null);
+
+    async function load() {
+      if (best?.server?.serverId) {
+        const url = await fetchEmbedUrl(best.server.serverId);
+        if (url) {
+          setEmbedUrl(url);
+          return;
+        }
+      }
+      // fallback ke defaultUrl
+      if (defaultUrl) {
+        setEmbedUrl(defaultUrl);
+      } else {
+        setError(true);
+        setLoading(false);
+      }
+    }
+
+    load();
   }, [qualities, defaultUrl]);
 
   return (
     <div className="space-y-3">
       {/* Video iframe */}
       <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden shadow-2xl">
-        {loading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black z-10">
+        {loading && !error && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black z-10 gap-2">
             <Loader2 className="w-8 h-8 text-purple-400 animate-spin" />
+            <span className="text-xs text-gray-500">Memuat video...</span>
           </div>
         )}
-        <iframe
-          ref={iframeRef}
-          src={videoUrl}
-          className="w-full h-full"
-          allowFullScreen
-          allow="fullscreen; autoplay"
-          sandbox="allow-same-origin allow-scripts allow-popups allow-presentation allow-forms"
-          title="Video Player"
-          onLoad={() => setLoading(false)}
-        />
+        {error && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black z-10 gap-2">
+            <AlertCircle className="w-8 h-8 text-red-400" />
+            <span className="text-xs text-gray-500">Video tidak tersedia</span>
+          </div>
+        )}
+        {embedUrl && (
+          <iframe
+            ref={iframeRef}
+            src={embedUrl}
+            className="w-full h-full"
+            allowFullScreen
+            allow="fullscreen; autoplay"
+            sandbox="allow-same-origin allow-scripts allow-popups allow-presentation allow-forms"
+            title="Video Player"
+            onLoad={() => setLoading(false)}
+          />
+        )}
       </div>
 
       {/* Auto-selected info badge */}
@@ -111,7 +145,7 @@ export default function VideoPlayer({ defaultUrl, qualities, downloadQualities }
             {best.qualityLabel}
           </span>
           <span className="text-[11px] px-2 py-0.5 bg-white/5 text-gray-400 rounded-md border border-white/10">
-            {best.serverLabel}
+            {best.server.title}
           </span>
         </div>
       )}
