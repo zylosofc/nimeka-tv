@@ -74,9 +74,9 @@ function GenreSheet({ onClose }: { onClose: () => void }) {
         {/* Scrollable genre list */}
         <div className="overflow-y-auto flex-1 px-4 py-3">
           {isLoading ? (
-            <div className="grid grid-cols-2 gap-2">
+            <div className="flex flex-col gap-2">
               {Array.from({ length: 12 }).map((_, i) => (
-                <div key={i} className="h-10 rounded-xl bg-white/5 animate-pulse" />
+                <div key={i} className="h-11 rounded-xl bg-white/5 animate-pulse" />
               ))}
             </div>
           ) : genres.length === 0 ? (
@@ -87,7 +87,7 @@ function GenreSheet({ onClose }: { onClose: () => void }) {
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-2 pb-6">
+            <div className="flex flex-col gap-1.5 pb-8">
               {genres.map((g: any, i: number) => {
                 const id = String(g.genreId || g.slug || g.id || i);
                 const name = String(g.title || g.name || id);
@@ -96,13 +96,13 @@ function GenreSheet({ onClose }: { onClose: () => void }) {
                     key={`${id}-${i}`}
                     to={`/genre/${id}`}
                     onClick={onClose}
-                    className={`flex items-center justify-between px-3 py-2.5 rounded-xl border text-sm font-medium active:scale-95 transition-all ${genreColors[i % genreColors.length]}`}
+                    className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-[#1e1e30] border border-white/5 active:bg-[#252545] active:scale-[0.98] transition-all"
                   >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <Tag className="w-3.5 h-3.5 flex-shrink-0" />
-                      <span className="truncate">{name}</span>
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <Tag className="w-3.5 h-3.5 flex-shrink-0 text-purple-400" />
+                      <span className="text-sm font-medium text-gray-200 truncate">{name}</span>
                     </div>
-                    <ChevronRight className="w-3.5 h-3.5 flex-shrink-0 opacity-40" />
+                    <ChevronRight className="w-3.5 h-3.5 flex-shrink-0 text-gray-600" />
                   </Link>
                 );
               })}

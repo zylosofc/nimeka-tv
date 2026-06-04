@@ -53,15 +53,19 @@ function unlockOrientation() {
 }
 
 export default function VideoPlayer({ defaultUrl, qualities, startAtSeconds = 0, onProgress }: VideoPlayerProps) {
-  const best = pickBestServer(qualities);
+  // Initial best server — hanya dihitung sekali saat mount / episode baru
   const [embedUrl, setEmbedUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  // Key untuk force-remount iframe hanya saat episode benar-benar ganti (bukan saat quality overlay muncul)
+  const [iframeKey, setIframeKey] = useState(0);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const startTimeRef = useRef(Date.now());
   const accumulatedRef = useRef(startAtSeconds);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Track episode slug agar tidak reload iframe saat qualities object reference berubah
+  const loadedForUrl = useRef<string>("");
 
   // Progress tracking
   useEffect(() => {
@@ -76,30 +80,45 @@ export default function VideoPlayer({ defaultUrl, qualities, startAtSeconds = 0,
     };
   }, [loading, error, onProgress]);
 
-  // Load embed URL
+  // Load embed URL — hanya jalan kalau defaultUrl berubah (episode baru), bukan saat qualities re-render
   useEffect(() => {
-    setLoading(true); setError(false); setEmbedUrl(null);
+    // Kalau defaultUrl sama dengan yang udah di-load, skip — ini cuma re-render biasa
+    if (defaultUrl && loadedForUrl.current === defaultUrl) return;
+
+    setLoading(true);
+    setError(false);
+    setEmbedUrl(null);
     accumulatedRef.current = startAtSeconds;
+
+    const best = pickBestServer(qualities);
     async function load() {
       if (best?.serverId) {
         const url = await fetchEmbedUrl(best.serverId);
-        if (url) { setEmbedUrl(url); return; }
+        if (url) {
+          loadedForUrl.current = defaultUrl;
+          setEmbedUrl(url);
+          setIframeKey(k => k + 1);
+          return;
+        }
       }
-      if (defaultUrl) { setEmbedUrl(defaultUrl); return; }
-      setError(true); setLoading(false);
+      if (defaultUrl) {
+        loadedForUrl.current = defaultUrl;
+        setEmbedUrl(defaultUrl);
+        setIframeKey(k => k + 1);
+        return;
+      }
+      setError(true);
+      setLoading(false);
     }
     load();
-  }, [qualities, defaultUrl, startAtSeconds]); // eslint-disable-line
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [defaultUrl]);
 
-  // Intercept fullscreen change — kalau iframe/wrapper masuk fullscreen, lock landscape
+  // Fullscreen landscape lock
   useEffect(() => {
     const onFsChange = () => {
       const fsEl = document.fullscreenElement || (document as any).webkitFullscreenElement;
-      if (fsEl) {
-        lockLandscape();
-      } else {
-        unlockOrientation();
-      }
+      if (fsEl) lockLandscape(); else unlockOrientation();
     };
     document.addEventListener("fullscreenchange", onFsChange);
     document.addEventListener("webkitfullscreenchange", onFsChange);
@@ -109,18 +128,14 @@ export default function VideoPlayer({ defaultUrl, qualities, startAtSeconds = 0,
     };
   }, []);
 
-  // Custom fullscreen handler — klik tombol expand kustom kita
   const handleExpand = useCallback(() => {
-    const iframe = iframeRef.current;
-    const wrapper = wrapperRef.current;
-    const target = iframe || wrapper;
+    const target = iframeRef.current || wrapperRef.current;
     if (!target) return;
     if ((target as any).requestFullscreen) {
       (target as any).requestFullscreen().catch(() => {});
     } else if ((target as any).webkitRequestFullscreen) {
       (target as any).webkitRequestFullscreen();
     }
-    // lock langsung juga, tidak hanya di event handler
     setTimeout(lockLandscape, 100);
   }, []);
 
@@ -141,6 +156,7 @@ export default function VideoPlayer({ defaultUrl, qualities, startAtSeconds = 0,
       {embedUrl && (
         <>
           <iframe
+            key={iframeKey}
             ref={iframeRef}
             src={embedUrl}
             className="w-full h-full"
@@ -150,7 +166,6 @@ export default function VideoPlayer({ defaultUrl, qualities, startAtSeconds = 0,
             title="Video Player"
             onLoad={() => setLoading(false)}
           />
-          {/* Tombol fullscreen overlay — muncul saat hover di atas video */}
           <button
             onClick={handleExpand}
             className="absolute bottom-2.5 right-2.5 z-20 p-2 bg-black/50 hover:bg-black/80 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm"

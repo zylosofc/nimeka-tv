@@ -31,13 +31,23 @@ export default function Watch() {
     || episode?.detail
     || null;
 
-  // Normalize field yang mungkin beda nama
-  const poster = info?.poster || info?.thumbnail || info?.image || info?.cover || "";
+  // Normalize field
+  const posterFromEpisode = info?.poster || info?.thumbnail || info?.image || info?.cover || "";
+  const animeId = episode?.animeId || info?.animeId || "";
   const title = info?.title || info?.name || episode?.title || "";
-  const synopsis = info?.synopsis?.paragraphs || info?.description ? [info?.description] : [];
+  const synopsis = info?.synopsis?.paragraphs?.[0] || info?.description || "";
   const genreList = info?.genreList || info?.genres || [];
-  const resolution = episode?.server?.qualities?.[0]?.title || episode?.defaultQuality || "";
+  const resolution = episode?.defaultQuality || episode?.server?.qualities?.[0]?.title || "";
   const releaseDate = episode?.releaseTime || episode?.date || episode?.aired || "";
+
+  // Fetch anime detail sebagai fallback poster — hanya kalau poster dari episode kosong
+  const { data: detailData } = trpc.anime.detail.useQuery(
+    { slug: animeId },
+    { enabled: !!animeId && !posterFromEpisode }
+  );
+  const detailInfo = detailData as any;
+  const posterFallback = detailInfo?.poster || detailInfo?.thumbnail || detailInfo?.image || detailInfo?.cover || "";
+  const poster = posterFromEpisode || posterFallback;
 
   useEffect(() => {
     if (!slug) return;
@@ -54,13 +64,13 @@ export default function Watch() {
     if (!slug || !episode) return;
     saveWatchProgress({
       episodeId: slug,
-      animeId: episode.animeId || "",
+      animeId,
       animeTitle: title,
       episodeNumber: episode.eps || "",
       poster,
       progressSeconds: seconds,
     });
-  }, [slug, episode, title, poster]);
+  }, [slug, episode, title, poster, animeId]);
 
   if (isLoading) {
     return (
@@ -94,7 +104,7 @@ export default function Watch() {
         {/* Back bar */}
         <div className="flex items-center gap-2 mb-3">
           <Link
-            to={episode.animeId ? `/anime/${episode.animeId}` : "/"}
+            to={animeId ? `/anime/${animeId}` : "/"}
             className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors flex-shrink-0"
           >
             <ArrowLeft className="w-4 h-4 text-gray-400" />
@@ -123,7 +133,7 @@ export default function Watch() {
             </button>
           ) : <div className="flex-1" />}
 
-          <Link to={episode.animeId ? `/anime/${episode.animeId}` : "/"}
+          <Link to={animeId ? `/anime/${animeId}` : "/"}
             className="flex items-center gap-1.5 px-3 py-2 bg-purple-600/20 text-purple-300 rounded-xl hover:bg-purple-600/30 text-xs">
             <Tv className="w-3.5 h-3.5" />Semua Eps
           </Link>
@@ -137,44 +147,62 @@ export default function Watch() {
         </div>
 
         {/* ── INFO CARD ── */}
-        <div className="mt-4 flex gap-3 items-start">
-          {/* Poster */}
-          <Link to={episode.animeId ? `/anime/${episode.animeId}` : "/"} className="flex-shrink-0">
-            <div className="w-20 h-[104px] rounded-xl overflow-hidden bg-[#1a1a2e] border border-white/10 shadow-lg">
-              {poster ? (
-                <img src={poster} alt={title} className="w-full h-full object-cover" loading="lazy" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <Tv className="w-6 h-6 text-gray-600" />
-                </div>
-              )}
-            </div>
+        <div className="mt-4 rounded-2xl overflow-hidden bg-[#1a1a2e] border border-white/5">
+
+          {/* Banner poster — ambil dari anime info */}
+          <Link to={animeId ? `/anime/${animeId}` : "/"} className="block relative w-full" style={{ height: 160 }}>
+            {poster ? (
+              <>
+                {/* Background blur */}
+                <img
+                  src={poster}
+                  alt=""
+                  className="absolute inset-0 w-full h-full object-cover scale-110"
+                  style={{ filter: "blur(18px) brightness(0.4)" }}
+                  aria-hidden
+                  loading="lazy"
+                />
+                {/* Poster center */}
+                <img
+                  src={poster}
+                  alt={title}
+                  className="absolute inset-0 w-full h-full object-contain"
+                  loading="lazy"
+                />
+              </>
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-purple-900/30 to-[#0f0f1a]">
+                <Tv className="w-12 h-12 text-gray-700" />
+              </div>
+            )}
+            {/* gradient bawah */}
+            <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-[#1a1a2e] to-transparent" />
           </Link>
 
-          {/* Meta */}
-          <div className="flex-1 min-w-0 pt-0.5">
+          {/* Meta bawah banner */}
+          <div className="px-3 pb-3 -mt-1">
             {title && (
-              <Link to={episode.animeId ? `/anime/${episode.animeId}` : "/"}>
+              <Link to={animeId ? `/anime/${animeId}` : "/"}>
                 <h2 className="text-[15px] font-bold text-white line-clamp-2 hover:text-purple-300 transition-colors leading-snug">
                   {title}
                 </h2>
               </Link>
             )}
 
-            {/* Pill row: Episode · Resolusi · Tanggal */}
+            {/* Pill row */}
             <div className="flex flex-wrap items-center gap-1.5 mt-2">
               {episode.eps && (
-                <span className="text-[11px] px-2.5 py-1 bg-[#1a1a2e] text-gray-300 rounded-lg border border-white/10 font-medium">
+                <span className="text-[11px] px-2.5 py-1 bg-[#0f0f1a] text-gray-300 rounded-lg border border-white/10 font-medium">
                   Episode {episode.eps}
                 </span>
               )}
               {resolution && (
-                <span className="text-[11px] px-2.5 py-1 bg-[#1a1a2e] text-gray-300 rounded-lg border border-white/10 font-medium">
+                <span className="text-[11px] px-2.5 py-1 bg-[#0f0f1a] text-gray-300 rounded-lg border border-white/10 font-medium">
                   {resolution}
                 </span>
               )}
               {releaseDate && (
-                <span className="flex items-center gap-1 text-[11px] px-2.5 py-1 bg-[#1a1a2e] text-gray-300 rounded-lg border border-white/10">
+                <span className="flex items-center gap-1 text-[11px] px-2.5 py-1 bg-[#0f0f1a] text-gray-300 rounded-lg border border-white/10">
                   <Calendar className="w-3 h-3" />{releaseDate}
                 </span>
               )}
@@ -200,9 +228,9 @@ export default function Watch() {
             </div>
 
             {/* Sinopsis */}
-            {(synopsis[0] || info?.synopsis?.paragraphs?.[0]) && (
+            {synopsis && (
               <p className="mt-1.5 text-[11px] text-gray-500 line-clamp-2 leading-relaxed">
-                {synopsis[0] || info?.synopsis?.paragraphs?.[0]}
+                {synopsis}
               </p>
             )}
           </div>
