@@ -211,25 +211,20 @@ export default function Watch() {
           </div>
 
           {/* ── STATS GRID (4 kolom) ── */}
-          {(totalEps || rank || member || duration) && (
-            <div className="mx-3 mb-3 grid grid-cols-4 divide-x divide-white/5 bg-[#0f0f1a] rounded-xl border border-white/5 overflow-hidden">
-              {[
-                { icon: <Film className="w-4 h-4" />, label: "Episode", value: totalEps ?? "-" },
-                { icon: <Trophy className="w-4 h-4" />, label: "Rank", value: rank ? `#${rank}` : "-" },
-                { icon: <Users className="w-4 h-4" />, label: "Member",
-                  value: member
-                    ? Number(member) >= 1000 ? `${(Number(member)/1000).toFixed(1)}K` : member
-                    : "-" },
-                { icon: <Clock className="w-4 h-4" />, label: "Durasi", value: duration ?? "-" },
-              ].map((s, i) => (
-                <div key={i} className="flex flex-col items-center justify-center py-3 gap-1">
-                  <span className="text-purple-400">{s.icon}</span>
-                  <span className="text-xs text-gray-400">{s.label}</span>
-                  <span className="text-sm font-bold text-white">{s.value}</span>
-                </div>
-              ))}
-            </div>
-          )}
+          <div className="mx-3 mb-3 grid grid-cols-4 divide-x divide-white/5 bg-[#0f0f1a] rounded-xl border border-white/5 overflow-hidden">
+            {[
+              { icon: <Film className="w-4 h-4" />, label: "Episode", value: episode.eps ?? "-" },
+              { icon: <Trophy className="w-4 h-4" />, label: "Total Eps", value: totalEps ?? (episodeList.length > 0 ? episodeList.length : "-") },
+              { icon: <Users className="w-4 h-4" />, label: "Resolusi", value: (episode.defaultQuality || qualities?.[0]?.title || "-") },
+              { icon: <Clock className="w-4 h-4" />, label: "Durasi", value: duration ?? "-" },
+            ].map((s, i) => (
+              <div key={i} className="flex flex-col items-center justify-center py-3 gap-1">
+                <span className="text-purple-400">{s.icon}</span>
+                <span className="text-xs text-gray-400">{s.label}</span>
+                <span className="text-sm font-bold text-white">{s.value}</span>
+              </div>
+            ))}
+          </div>
 
           {/* Sinopsis */}
           {synopsis && (
