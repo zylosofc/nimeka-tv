@@ -58,10 +58,21 @@ export const animeRouter = createRouter({
       return result.data || [];
     }),
 
-  // Genre list
+  // Genre list - try multiple response shapes
   genres: publicQuery.query(async () => {
     const result = await fetchSanka("/anime/genre");
-    return result.data || [];
+    // Handle berbagai shape response
+    const data = result.data;
+    if (!data) return [];
+    if (Array.isArray(data)) return data;
+    if (Array.isArray(data.genreList)) return data.genreList;
+    if (Array.isArray(data.genres)) return data.genres;
+    // Jika data adalah object dengan keys genre
+    if (typeof data === "object") {
+      const vals = Object.values(data);
+      if (vals.length > 0 && Array.isArray(vals[0])) return vals[0] as unknown[];
+    }
+    return [];
   }),
 
   // Anime by genre

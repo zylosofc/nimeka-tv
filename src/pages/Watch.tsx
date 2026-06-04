@@ -1,4 +1,4 @@
-import { useParams, Link } from "react-router";
+import { useParams, Link, useNavigate } from "react-router";
 import { trpc } from "@/providers/trpc";
 import Header from "@/components/layout/Header";
 import BottomNav from "@/components/layout/BottomNav";
@@ -16,11 +16,10 @@ import {
   Users,
   Clock,
   Film,
-  Download,
-  ChevronDown,
 } from "lucide-react";
 import { motion } from "framer-motion";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { saveWatchProgress, getWatchProgress } from "@/hooks/useWatchHistory";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -28,9 +27,11 @@ type TabType = "info" | "komentar";
 
 export default function Watch() {
   const { slug } = useParams<{ slug: string }>();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabType>("info");
-  const [showDownloads, setShowDownloads] = useState(false);
   const episodeScrollRef = useRef<HTMLDivElement>(null);
+  const [startAtSeconds, setStartAtSeconds] = useState(0);
+  const [progressLoaded, setProgressLoaded] = useState(false);
 
   const { data, isLoading } = trpc.anime.episode.useQuery(
     { slug: slug || "" },
@@ -40,6 +41,15 @@ export default function Watch() {
   const episode = data as any;
   const info = episode?.info as any;
 
+  // Load saved progress ketika episode berubah
+  useEffect(() => {
+    if (!slug) return;
+    const saved = getWatchProgress(slug);
+    setStartAtSeconds(saved);
+    setProgressLoaded(true);
+  }, [slug]);
+
+  // Scroll episode aktif ke view
   useEffect(() => {
     if (episodeScrollRef.current) {
       const active = episodeScrollRef.current.querySelector("[data-active='true']");
@@ -48,6 +58,24 @@ export default function Watch() {
       }
     }
   }, [slug, episode]);
+
+  // Simpan progress ke localStorage
+  const handleProgress = useCallback((seconds: number) => {
+    if (!slug || !episode) return;
+    saveWatchProgress({
+      episodeId: slug,
+      animeId: episode.animeId || "",
+      animeTitle: info?.title || episode.title || "",
+      episodeNumber: episode.eps || "",
+      poster: info?.poster || "",
+      progressSeconds: seconds,
+    });
+  }, [slug, episode, info]);
+
+  // Auto-navigate ke episode saat klik (sudah di Link, tapi pastikan replace agar tidak stack history)
+  const handleEpisodeClick = (episodeId: string) => {
+    navigate(`/watch/${episodeId}`, { replace: false });
+  };
 
   if (isLoading) {
     return (
@@ -75,7 +103,6 @@ export default function Watch() {
   }
 
   const qualities = episode.server?.qualities || [];
-  const downloadQualities = episode.downloadUrl?.qualities || [];
   const episodeList: any[] = info?.episodeList || [];
 
   return (
@@ -101,16 +128,20 @@ export default function Watch() {
         </motion.div>
 
         {/* Video Player */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.98 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.3 }}
-        >
-          <VideoPlayer
-            defaultUrl={episode.defaultStreamingUrl}
-            qualities={qualities}
-          />
-        </motion.div>
+        {progressLoaded && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.3 }}
+          >
+            <VideoPlayer
+              defaultUrl={episode.defaultStreamingUrl}
+              qualities={qualities}
+              startAtSeconds={startAtSeconds}
+              onProgress={handleProgress}
+            />
+          </motion.div>
+        )}
 
         {/* Prev / Next nav */}
         <div className="flex items-center justify-between mt-3 gap-2">
@@ -268,70 +299,25 @@ export default function Watch() {
               {[...episodeList].reverse().map((ep: any) => {
                 const isActive = ep.episodeId === slug;
                 return (
-                  <Link
+                  <button
                     key={ep.episodeId}
-                    to={`/watch/${ep.episodeId}`}
                     data-active={isActive}
-                    replace
+                    onClick={() => handleEpisodeClick(ep.episodeId)}
+                    className={`
+                      w-11 h-11 flex-shrink-0 rounded-xl flex items-center justify-center
+                      text-sm font-semibold transition-all duration-200
+                      ${isActive
+                        ? "bg-purple-600 text-white shadow-lg shadow-purple-600/30 scale-105"
+                        : "bg-[#1a1a2e] text-gray-300 hover:bg-[#252540] hover:text-white border border-white/5"
+                      }
+                    `}
                   >
-                    <div
-                      className={`
-                        w-11 h-11 flex-shrink-0 rounded-xl flex items-center justify-center
-                        text-sm font-semibold transition-all duration-200
-                        ${isActive
-                          ? "bg-purple-600 text-white shadow-lg shadow-purple-600/30 scale-105"
-                          : "bg-[#1a1a2e] text-gray-300 hover:bg-[#252540] hover:text-white border border-white/5"
-                        }
-                      `}
-                    >
-                      {ep.eps}
-                    </div>
-                  </Link>
+                    {ep.eps}
+                  </button>
                 );
               })}
             </div>
           </motion.section>
-        )}
-
-        {/* Download Section */}
-        {downloadQualities.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.22 }}
-            className="mt-4 bg-[#1a1a2e] rounded-xl overflow-hidden"
-          >
-            <button
-              onClick={() => setShowDownloads(!showDownloads)}
-              className="flex items-center justify-between w-full p-4 hover:bg-white/5 transition-colors"
-            >
-              <div className="flex items-center gap-2">
-                <Download className="w-4 h-4 text-purple-400" />
-                <span className="text-sm font-medium text-gray-200">Link Download</span>
-              </div>
-              <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${showDownloads ? "rotate-180" : ""}`} />
-            </button>
-            {showDownloads && (
-              <div className="px-4 pb-4 space-y-3">
-                {downloadQualities.map((dq: any) => (
-                  <div key={dq.title}>
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-xs font-medium text-purple-400">{dq.title}</span>
-                      <span className="text-[10px] text-gray-500">({dq.size})</span>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {dq.urls.map((u: any) => (
-                        <a key={u.title} href={u.url} target="_blank" rel="noopener noreferrer"
-                          className="px-3 py-1.5 text-xs bg-gray-800 text-gray-300 rounded-lg hover:bg-purple-600 hover:text-white transition-all">
-                          {u.title}
-                        </a>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </motion.div>
         )}
 
         {/* Tabs: Info / Komentar */}

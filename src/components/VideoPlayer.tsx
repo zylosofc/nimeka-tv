@@ -15,6 +15,8 @@ interface QualityServer {
 interface VideoPlayerProps {
   defaultUrl: string;
   qualities: QualityServer[];
+  startAtSeconds?: number;
+  onProgress?: (seconds: number) => void;
 }
 
 const QUALITY_ORDER = ["1080p", "720p", "480p", "360p", "HD", "SD"];
@@ -53,17 +55,43 @@ async function fetchEmbedUrl(serverId: string): Promise<string | null> {
   }
 }
 
-export default function VideoPlayer({ defaultUrl, qualities }: VideoPlayerProps) {
+export default function VideoPlayer({ defaultUrl, qualities, startAtSeconds = 0, onProgress }: VideoPlayerProps) {
   const best = pickBestServer(qualities);
   const [embedUrl, setEmbedUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const progressTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const startTimeRef = useRef<number>(Date.now());
+  const accumulatedRef = useRef<number>(startAtSeconds);
+
+  // Track progress dengan estimasi waktu (iframe tidak bisa di-listen langsung)
+  useEffect(() => {
+    if (!onProgress || loading || error) return;
+
+    startTimeRef.current = Date.now();
+
+    progressTimerRef.current = setInterval(() => {
+      const elapsed = (Date.now() - startTimeRef.current) / 1000;
+      const total = accumulatedRef.current + elapsed;
+      onProgress(Math.floor(total));
+    }, 5000); // update tiap 5 detik
+
+    return () => {
+      if (progressTimerRef.current) {
+        clearInterval(progressTimerRef.current);
+        // Save final accumulated time
+        const elapsed = (Date.now() - startTimeRef.current) / 1000;
+        accumulatedRef.current = accumulatedRef.current + elapsed;
+      }
+    };
+  }, [loading, error, onProgress]);
 
   useEffect(() => {
     setLoading(true);
     setError(false);
     setEmbedUrl(null);
+    accumulatedRef.current = startAtSeconds;
 
     async function load() {
       if (best?.serverId) {
@@ -76,7 +104,7 @@ export default function VideoPlayer({ defaultUrl, qualities }: VideoPlayerProps)
     }
 
     load();
-  }, [qualities, defaultUrl]);
+  }, [qualities, defaultUrl, startAtSeconds]);
 
   return (
     <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden shadow-2xl">

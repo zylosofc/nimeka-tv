@@ -26,17 +26,29 @@ const genreColors: string[] = [
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-export default function Genres() {
-  const { data, isLoading, error } = trpc.anime.genres.useQuery();
+function normalizeGenres(data: any): any[] {
+  if (!data) return [];
+  if (Array.isArray(data)) return data;
+  if (typeof data !== "object") return [];
 
-  // Handle berbagai response shape dari API
-  let genres: any[] = [];
-  if (Array.isArray(data)) {
-    genres = data;
-  } else if (data && typeof data === "object") {
-    const d = data as any;
-    genres = d.genreList || d.genres || d.data || [];
+  // coba semua kemungkinan keys
+  for (const key of ["genreList", "genres", "data", "list", "items"]) {
+    if (Array.isArray(data[key])) return data[key];
   }
+
+  // jika object yang isinya array
+  const values = Object.values(data);
+  for (const v of values) {
+    if (Array.isArray(v) && v.length > 0) return v as any[];
+  }
+
+  return [];
+}
+
+export default function Genres() {
+  const { data, isLoading, error, refetch } = trpc.anime.genres.useQuery();
+
+  const genres = normalizeGenres(data);
 
   return (
     <div className="min-h-screen bg-[#0f0f1a] text-white pb-20">
@@ -53,30 +65,46 @@ export default function Genres() {
         ) : error ? (
           <div className="text-center py-16">
             <Compass className="w-12 h-12 text-gray-600 mx-auto mb-3" />
-            <p className="text-gray-500">Gagal memuat genre</p>
+            <p className="text-gray-500 mb-3">Gagal memuat genre</p>
+            <button
+              onClick={() => refetch()}
+              className="px-4 py-2 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 transition-colors"
+            >
+              Coba Lagi
+            </button>
           </div>
         ) : genres.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-            {genres.map((genre: any, i: number) => (
-              <Link key={genre.genreId || genre.slug || i} to={`/genre/${genre.genreId || genre.slug}`}>
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.03 }}
-                  className={`flex items-center gap-3 p-4 rounded-xl bg-gradient-to-br ${genreColors[i % genreColors.length]} border hover:scale-[1.02] transition-transform`}
-                >
-                  <Tag className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                  <span className="text-sm font-medium text-gray-200">
-                    {genre.title || genre.name}
-                  </span>
-                </motion.div>
-              </Link>
-            ))}
+            {genres.map((genre: any, i: number) => {
+              const id = genre.genreId || genre.slug || genre.id || String(i);
+              const name = genre.title || genre.name || genre.label || id;
+              return (
+                <Link key={id} to={`/genre/${id}`}>
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.03 }}
+                    className={`flex items-center gap-3 p-4 rounded-xl bg-gradient-to-br ${genreColors[i % genreColors.length]} border hover:scale-[1.02] transition-transform`}
+                  >
+                    <Tag className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                    <span className="text-sm font-medium text-gray-200">
+                      {name}
+                    </span>
+                  </motion.div>
+                </Link>
+              );
+            })}
           </div>
         ) : (
           <div className="text-center py-16">
             <Compass className="w-12 h-12 text-gray-600 mx-auto mb-3" />
-            <p className="text-gray-500">Genre tidak tersedia</p>
+            <p className="text-gray-500 mb-3">Genre tidak tersedia</p>
+            <button
+              onClick={() => refetch()}
+              className="px-4 py-2 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 transition-colors"
+            >
+              Muat Ulang
+            </button>
           </div>
         )}
       </main>
