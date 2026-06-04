@@ -6,7 +6,7 @@ import VideoPlayer from "@/components/VideoPlayer";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import {
   ArrowLeft, ArrowRight, ChevronLeft, ChevronRight,
-  Star, Bookmark, Heart, Trophy, Users, Clock, Film
+  Star, Bookmark, Heart, Clock, Film
 } from "lucide-react";
 import { useRef, useEffect, useCallback, useState } from "react";
 import { saveWatchProgress, getWatchProgress } from "@/hooks/useWatchHistory";
@@ -66,14 +66,7 @@ export default function Watch() {
   const currentEpFromList = episodeList.find((e: any) => e.episodeId === slug);
   const currentEps = episode?.eps || currentEpFromList?.eps || currentEpFromList?.episodeNumber || "-";
 
-  // Total episode dari detail API (paling akurat), fallback ke info, lalu episodeList
-  const totalEps = det?.episodes || det?.totalEpisodes || det?.episodeCount
-    || info?.episodes || info?.totalEpisodes
-    || (episodeList.length > 0 ? episodeList.length : null);
-
   // Stats dari API
-  const score    = info?.score ?? det?.score ?? null;
-  const views    = info?.members ?? info?.views ?? info?.totalViews ?? det?.members ?? det?.views ?? null;
   const duration = info?.duration ?? det?.duration ?? null;
   const qualities = episode?.server?.qualities || [];
 
@@ -171,32 +164,26 @@ export default function Watch() {
                 </h2>
               </Link>
 
-              {/* Badge row: Episode (purple) · Rating (gold) · Views (gray) */}
+              {/* Baris: Episode · Resolusi · Durasi + Simpan & Suka */}
               <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                {episode.eps && (
-                  <span className="text-[11px] px-2.5 py-0.5 bg-purple-600 text-white rounded-full font-semibold">
-                    Episode {episode.eps}
+                {currentEps !== "-" && (
+                  <span className="text-[11px] px-2.5 py-1 bg-[#0f0f1a] text-gray-300 rounded-lg border border-white/10 font-medium">
+                    Ep {currentEps}
                   </span>
                 )}
-                {score && (
-                  <span className="flex items-center gap-1 text-[11px] px-2.5 py-0.5 bg-yellow-500 text-black rounded-full font-bold">
-                    <Star className="w-3 h-3 fill-black" />{score}
+                {(episode.defaultQuality || qualities?.[0]?.title) && (
+                  <span className="text-[11px] px-2.5 py-1 bg-[#0f0f1a] text-gray-300 rounded-lg border border-white/10 font-medium">
+                    {episode.defaultQuality || qualities?.[0]?.title}
                   </span>
                 )}
-                {views && (
-                  <span className="flex items-center gap-1 text-[11px] px-2.5 py-0.5 bg-white/10 text-gray-300 rounded-full">
-                    👁 {Number(views) >= 1000
-                      ? `${(Number(views) / 1000).toFixed(1)}K`
-                      : Number(views).toLocaleString("id-ID")} ditonton
+                {duration && (
+                  <span className="text-[11px] px-2.5 py-1 bg-[#0f0f1a] text-gray-300 rounded-lg border border-white/10 font-medium">
+                    {duration}
                   </span>
                 )}
-              </div>
-
-              {/* Simpan & Suka */}
-              <div className="flex gap-2 mt-2.5">
                 <button
                   onClick={() => setSaved(s => !s)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs border transition-all ${saved
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs border transition-all ${saved
                     ? "bg-purple-600/20 text-purple-300 border-purple-500/30"
                     : "bg-white/5 text-gray-300 border-white/10 hover:bg-white/10"}`}
                 >
@@ -205,7 +192,7 @@ export default function Watch() {
                 </button>
                 <button
                   onClick={() => setLiked(l => !l)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs border transition-all ${liked
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs border transition-all ${liked
                     ? "bg-pink-600/20 text-pink-300 border-pink-500/30"
                     : "bg-white/5 text-gray-300 border-white/10 hover:bg-white/10"}`}
                 >
@@ -214,22 +201,6 @@ export default function Watch() {
                 </button>
               </div>
             </div>
-          </div>
-
-          {/* ── STATS GRID (4 kolom) ── */}
-          <div className="mx-3 mb-3 grid grid-cols-4 divide-x divide-white/5 bg-[#0f0f1a] rounded-xl border border-white/5 overflow-hidden">
-            {[
-              { icon: <Film className="w-4 h-4" />, label: "Episode", value: currentEps },
-              { icon: <Trophy className="w-4 h-4" />, label: "Total Eps", value: totalEps ?? (episodeList.length > 0 ? episodeList.length : "-") },
-              { icon: <Users className="w-4 h-4" />, label: "Resolusi", value: (episode.defaultQuality || qualities?.[0]?.title || "-") },
-              { icon: <Clock className="w-4 h-4" />, label: "Durasi", value: duration ?? "-" },
-            ].map((s, i) => (
-              <div key={i} className="flex flex-col items-center justify-center py-3 gap-1">
-                <span className="text-purple-400">{s.icon}</span>
-                <span className="text-xs text-gray-400">{s.label}</span>
-                <span className="text-sm font-bold text-white">{s.value}</span>
-              </div>
-            ))}
           </div>
 
           {/* Sinopsis */}
