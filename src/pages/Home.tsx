@@ -88,7 +88,7 @@ export default function Home() {
           {ongoingLoading ? (
             <SkeletonCard count={6} />
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 sm:gap-4">
               {ongoing.slice(5, 17).map((anime: AnimeItem, i: number) => (
                 <AnimeCard key={anime.animeId} anime={anime} index={i} />
               ))}
