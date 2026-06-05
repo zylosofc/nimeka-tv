@@ -4,7 +4,7 @@ import BottomNav from "@/components/layout/BottomNav";
 import HeroBanner from "@/components/HeroBanner";
 import AnimeCard from "@/components/AnimeCard";
 import SectionTitle from "@/components/SectionTitle";
-import { SkeletonCard, SkeletonLargeGrid } from "@/components/LoadingSpinner";
+import { SkeletonCard, SkeletonGrid } from "@/components/LoadingSpinner";
 import { Flame, Clock, TrendingUp, History, Play } from "lucide-react";
 import { Link } from "react-router";
 import { useEffect, useState } from "react";
@@ -203,7 +203,7 @@ export default function Home() {
         <section className="mb-8">
           <SectionTitle title="Update Terbaru" to="/anime?filter=ongoing" />
           {newEpLoading || ongoingLoading ? (
-            <SkeletonLargeGrid count={6} />
+            <SkeletonGrid count={6} />
           ) : (
             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2.5 sm:gap-3">
               {newEpsDisplay.slice(0, 12).map((anime, i) => (
@@ -217,7 +217,7 @@ export default function Home() {
         <section className="mb-8">
           <SectionTitle title="Anime Populer" to="/anime?filter=all" />
           {popularLoading || ongoingLoading ? (
-            <SkeletonLargeGrid count={6} />
+            <SkeletonGrid count={6} />
           ) : popularDisplay.length > 0 ? (
             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2.5 sm:gap-3">
               {popularDisplay.slice(0, 12).map((anime, i) => (
@@ -232,7 +232,7 @@ export default function Home() {
           <section className="mb-8">
             <SectionTitle title="Anime Selesai" to="/anime?filter=completed" />
             {completedLoading ? (
-              <SkeletonLargeGrid count={6} />
+              <SkeletonGrid count={6} />
             ) : (
               <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2.5 sm:gap-3">
                 {completedDisplay.slice(0, 12).map((anime, i) => (
