@@ -91,7 +91,6 @@ export default function Genres() {
             gridTemplateColumns: "repeat(2, 1fr)",
             gap: 10,
           }}
-          className="sm:!grid-cols-3 md:!grid-cols-4"
           >
             {genres.map((genre: any, i: number) => {
               const id = String(genre.genreId || genre.slug || genre.id || i);

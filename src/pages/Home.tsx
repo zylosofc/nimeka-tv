@@ -43,18 +43,21 @@ function useWatchHistory(): WatchHistoryItem[] {
 }
 
 export default function Home() {
-  const { data: ongoingList, isLoading: ongoingLoading } = trpc.anime.home.useQuery();
-  const { data: newEpList, isLoading: newEpLoading } = trpc.anime.newEpisodes.useQuery();
-  const { data: popularList, isLoading: popularLoading } = trpc.anime.popular.useQuery();
-  const { data: completedList, isLoading: completedLoading } = trpc.anime.completedHome.useQuery();
+  const { data: homeData, isLoading: ongoingLoading } = trpc.anime.home.useQuery();
   const watchHistory = useWatchHistory();
 
-  const ongoing: AnimeItem[] = (ongoingList as AnimeItem[]) || [];
-  const newEps: AnimeItem[] = (newEpList as AnimeItem[]) || [];
-  const popular: AnimeItem[] = (popularList as AnimeItem[]) || [];
-  const completed: AnimeItem[] = (completedList as AnimeItem[]) || [];
+  // home API returns { ongoing, completed, newUpdate, hot }
+  const homeObj = homeData as any;
+  const ongoing: AnimeItem[] = homeObj?.ongoing || [];
+  const newEps: AnimeItem[] = homeObj?.newUpdate || [];
+  const popular: AnimeItem[] = homeObj?.hot || [];
+  const completed: AnimeItem[] = homeObj?.completed || [];
 
-  // Fallback: if dedicated queries return empty, use slices of home data
+  const newEpLoading = ongoingLoading;
+  const popularLoading = ongoingLoading;
+  const completedLoading = ongoingLoading;
+
+  // Fallback: if dedicated sections return empty, use slices of ongoing
   const newEpsDisplay = newEps.length > 0 ? newEps : ongoing.slice(0, 12);
   const popularDisplay = popular.length > 0 ? popular : ongoing.slice(0, 12);
   const completedDisplay = completed.length > 0 ? completed : [];
@@ -147,7 +150,7 @@ export default function Home() {
                     WebkitLineClamp: 2, WebkitBoxOrient: "vertical",
                     lineHeight: 1.4
                   }}>
-                    {item.title || item.episodeTitle || "Episode " + item.episodeNum}
+                    {item.title || ("Episode " + item.episodeNum)}
                   </p>
                 </Link>
               ))}

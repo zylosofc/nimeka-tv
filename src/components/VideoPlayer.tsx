@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from "react";
-import { Loader2, AlertCircle } from "lucide-react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { Loader2, AlertCircle, Maximize } from "lucide-react";
 
 interface ServerItem {
   title: string;
@@ -15,7 +15,6 @@ interface QualityServer {
 interface VideoPlayerProps {
   defaultUrl: string;
   qualities: QualityServer[];
-  // Resume playback
   resumeTime?: number;
   onTimeUpdate?: (time: number) => void;
 }
@@ -59,6 +58,7 @@ export default function VideoPlayer({ defaultUrl, qualities, resumeTime, onTimeU
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -69,27 +69,29 @@ export default function VideoPlayer({ defaultUrl, qualities, resumeTime, onTimeU
       if (best?.serverId) {
         const url = await fetchEmbedUrl(best.serverId);
         if (url) {
-          // Append resume time as fragment/param if available
-          const finalUrl = resumeTime && resumeTime > 5
-            ? url + (url.includes("?") ? `&t=${Math.floor(resumeTime)}` : `?t=${Math.floor(resumeTime)}`)
-            : url;
+          const finalUrl =
+            resumeTime && resumeTime > 5
+              ? url + (url.includes("?") ? `&t=${Math.floor(resumeTime)}` : `?t=${Math.floor(resumeTime)}`)
+              : url;
           setEmbedUrl(finalUrl);
           return;
         }
       }
       if (defaultUrl) {
-        const finalUrl = resumeTime && resumeTime > 5
-          ? defaultUrl + (defaultUrl.includes("?") ? `&t=${Math.floor(resumeTime)}` : `?t=${Math.floor(resumeTime)}`)
-          : defaultUrl;
+        const finalUrl =
+          resumeTime && resumeTime > 5
+            ? defaultUrl + (defaultUrl.includes("?") ? `&t=${Math.floor(resumeTime)}` : `?t=${Math.floor(resumeTime)}`)
+            : defaultUrl;
         setEmbedUrl(finalUrl);
         return;
       }
+      // Both server and defaultUrl failed
       setError(true);
       setLoading(false);
     }
 
     load();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [qualities, defaultUrl]);
 
   // Listen to postMessage from iframe for time tracking
@@ -107,8 +109,25 @@ export default function VideoPlayer({ defaultUrl, qualities, resumeTime, onTimeU
     return () => window.removeEventListener("message", handler);
   }, [onTimeUpdate]);
 
+  // Custom fullscreen handler — satu tombol saja
+  const handleFullscreen = useCallback(() => {
+    const el = wrapperRef.current;
+    if (!el) return;
+    if (!document.fullscreenElement) {
+      el.requestFullscreen?.().catch(() => {
+        // fallback: request fullscreen on iframe directly
+        iframeRef.current?.requestFullscreen?.();
+      });
+    } else {
+      document.exitFullscreen?.();
+    }
+  }, []);
+
   return (
-    <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden shadow-2xl">
+    <div
+      ref={wrapperRef}
+      className="relative w-full aspect-video bg-black rounded-xl overflow-hidden shadow-2xl group"
+    >
       {loading && !error && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black z-10 gap-2">
           <Loader2 className="w-8 h-8 text-purple-400 animate-spin" />
@@ -126,14 +145,23 @@ export default function VideoPlayer({ defaultUrl, qualities, resumeTime, onTimeU
           ref={iframeRef}
           src={embedUrl}
           className="w-full h-full"
-          allowFullScreen
-          // PENTING: TIDAK pakai sandbox — itu yang bikin player settings glitch
-          // sandbox restrict postMessage & popup yang dibutuhkan player control
-          allow="autoplay; fullscreen; picture-in-picture; encrypted-media; gyroscope; accelerometer"
+          // allowFullScreen dihapus — pakai custom fullscreen button kita
+          allow="autoplay; picture-in-picture; encrypted-media; gyroscope; accelerometer"
           referrerPolicy="no-referrer-when-downgrade"
           title="Video Player"
           onLoad={() => setLoading(false)}
         />
+      )}
+      {/* Custom fullscreen button — satu tombol, pojok kanan bawah */}
+      {embedUrl && !loading && !error && (
+        <button
+          onClick={handleFullscreen}
+          className="absolute bottom-3 right-3 z-20 p-1.5 rounded-md bg-black/60 hover:bg-black/80 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+          title="Layar Penuh"
+          aria-label="Layar Penuh"
+        >
+          <Maximize className="w-4 h-4" />
+        </button>
       )}
     </div>
   );

@@ -20,6 +20,7 @@ export default function Schedule() {
 
   const schedule = data as any[];
   const currentSchedule = schedule?.find((s: any) => s.day === selectedDay);
+  const animeList = currentSchedule?.anime_list || currentSchedule?.animeList || [];
 
   return (
     <div className="min-h-screen bg-[#0f0f1a] text-white pb-20">
@@ -52,14 +53,14 @@ export default function Schedule() {
         {/* Anime List */}
         {isLoading ? (
           <LoadingSpinner />
-        ) : currentSchedule?.anime_list?.length > 0 ? (
+        ) : animeList.length > 0 ? (
           <motion.div
             key={selectedDay}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             className="space-y-1"
           >
-            {currentSchedule.anime_list.map((anime: any, i: number) => (
+            {animeList.map((anime: any, i: number) => (
               <AnimeCard
                 key={anime.slug}
                 anime={{

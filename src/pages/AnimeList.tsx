@@ -150,7 +150,8 @@ export default function AnimeList() {
             <span className="text-sm text-gray-400 px-2 py-1 bg-[#1a1a2e] rounded-lg">Hal {page}</span>
             <button
               onClick={() => setPage((p) => p + 1)}
-              className="flex items-center gap-1 px-4 py-2 bg-[#1a1a2e] text-gray-300 rounded-lg hover:bg-[#252540] transition-colors"
+              disabled={animeList.length < 20}
+              className="flex items-center gap-1 px-4 py-2 bg-[#1a1a2e] text-gray-300 rounded-lg hover:bg-[#252540] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               Selanjutnya<ChevronRight className="w-4 h-4" />
             </button>

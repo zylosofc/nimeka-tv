@@ -15,7 +15,7 @@ interface AnimeCardProps {
     type?: string;
   };
   index?: number;
-  variant?: "default" | "small" | "schedule" | "grid";
+  variant?: "default" | "small" | "schedule" | "grid" | "large";
 }
 
 export default function AnimeCard({ anime, index = 0, variant = "default" }: AnimeCardProps) {
@@ -89,6 +89,36 @@ export default function AnimeCard({ anime, index = 0, variant = "default" }: Ani
             )}
           </div>
           <h3 className="mt-1.5 text-[11px] text-gray-200 line-clamp-2 leading-tight font-medium group-hover:text-purple-400 transition-colors">
+            {anime.title}
+          </h3>
+        </motion.div>
+      </Link>
+    );
+  }
+
+  // Large variant - for homepage grids (3-5 col)
+  if (variant === "large") {
+    return (
+      <Link to={`/anime/${anime.animeId}`} className="block">
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.04 }}>
+          <div className="relative aspect-[3/4] rounded-xl overflow-hidden bg-gray-800 group shadow-md">
+            <img src={anime.poster} alt={anime.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" loading="lazy" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+            <div className="absolute inset-0 bg-purple-600/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+              <div className="w-9 h-9 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                <Play className="w-4 h-4 text-white fill-white" />
+              </div>
+            </div>
+            {anime.episodes !== undefined && (
+              <span className="absolute top-1.5 left-1.5 text-[10px] px-1.5 py-0.5 bg-purple-600 text-white rounded-md font-medium">EP {anime.episodes}</span>
+            )}
+            {anime.releaseDay && (
+              <span className="absolute bottom-1.5 left-1.5 text-[9px] px-1.5 py-0.5 bg-white/20 backdrop-blur-sm text-white rounded">
+                {anime.releaseDay}
+              </span>
+            )}
+          </div>
+          <h3 className="mt-1.5 text-[11px] text-gray-200 line-clamp-2 leading-tight font-medium">
             {anime.title}
           </h3>
         </motion.div>

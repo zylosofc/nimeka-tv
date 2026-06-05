@@ -23,10 +23,66 @@ const ICON_COLORS = [
   "#a78bfa","#2dd4bf","#fbbf24","#fb7185","#e879f9",
 ];
 
-// Genre popup — pakai createPortal + 100% inline style, ZERO Tailwind dynamic class
+// Inject keyframes sekali ke <head> — bukan di dalam portal
+const SHEET_STYLE_ID = "nimeka-genre-sheet-style";
+function ensureSheetStyles() {
+  if (document.getElementById(SHEET_STYLE_ID)) return;
+  const s = document.createElement("style");
+  s.id = SHEET_STYLE_ID;
+  s.textContent = `
+    @keyframes nimekaSheetUp {
+      from { transform: translateY(100%); }
+      to   { transform: translateY(0); }
+    }
+    @keyframes nimekaPulse {
+      0%, 100% { opacity: 0.5; }
+      50% { opacity: 1; }
+    }
+    .nimeka-genre-sheet {
+      background-color: #12121e;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px 20px 0 0;
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+      animation: nimekaSheetUp 0.25s cubic-bezier(0.32,0.72,0,1) both;
+      will-change: transform;
+      -webkit-overflow-scrolling: touch;
+    }
+    .nimeka-genre-scroll {
+      overflow-y: auto;
+      flex: 1;
+      padding: 8px 12px 40px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .nimeka-genre-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      padding-top: 8px;
+    }
+    .nimeka-genre-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      text-decoration: none;
+      background-color: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.07);
+    }
+    .nimeka-skeleton-item {
+      height: 44px;
+      border-radius: 10px;
+      background: rgba(255,255,255,0.05);
+      animation: nimekaPulse 1.4s ease-in-out infinite;
+    }
+  `;
+  document.head.appendChild(s);
+}
+
 function GenrePopup({ onClose }: { onClose: () => void }) {
   const { data, isLoading, refetch } = trpc.anime.genres.useQuery();
-  const sheetRef = useRef<HTMLDivElement>(null);
 
   let genres: any[] = [];
   if (Array.isArray(data)) genres = data;
@@ -35,38 +91,39 @@ function GenrePopup({ onClose }: { onClose: () => void }) {
     genres = d.genreList || d.genres || d.list || d.data || [];
   }
 
-  // Lock body scroll saat popup terbuka
   useEffect(() => {
+    ensureSheetStyles();
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => { document.body.style.overflow = prev; };
   }, []);
 
+  // Close on escape key
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
   const popup = (
     <div
       onClick={onClose}
       style={{
-        position: "fixed", inset: 0, zIndex: 9999,
-        backgroundColor: "rgba(0,0,0,0.7)",
-        display: "flex", flexDirection: "column", justifyContent: "flex-end",
+        position: "fixed",
+        inset: 0,
+        zIndex: 9999,
+        backgroundColor: "rgba(0,0,0,0.65)",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "flex-end",
       }}
     >
       <div
-        ref={sheetRef}
+        className="nimeka-genre-sheet"
         onClick={e => e.stopPropagation()}
-        style={{
-          backgroundColor: "#12121e",
-          borderTop: "1px solid rgba(255,255,255,0.08)",
-          borderRadius: "20px 20px 0 0",
-          maxHeight: "80vh",
-          display: "flex",
-          flexDirection: "column",
-          // Animasi pakai CSS transform — tidak pakai framer-motion
-          animation: "sheetUp 0.2s cubic-bezier(0.32,0.72,0,1)",
-        }}
       >
         {/* Handle bar */}
-        <div style={{ display: "flex", justifyContent: "center", padding: "10px 0 4px" }}>
+        <div style={{ display: "flex", justifyContent: "center", padding: "10px 0 4px", flexShrink: 0 }}>
           <div style={{ width: 36, height: 4, background: "rgba(255,255,255,0.2)", borderRadius: 99 }} />
         </div>
 
@@ -74,7 +131,8 @@ function GenrePopup({ onClose }: { onClose: () => void }) {
         <div style={{
           display: "flex", alignItems: "center", justifyContent: "space-between",
           padding: "0 16px 12px 16px",
-          borderBottom: "1px solid rgba(255,255,255,0.06)"
+          borderBottom: "1px solid rgba(255,255,255,0.06)",
+          flexShrink: 0,
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <Compass style={{ width: 18, height: 18, color: "#a78bfa" }} />
@@ -83,9 +141,10 @@ function GenrePopup({ onClose }: { onClose: () => void }) {
           <button
             onClick={onClose}
             style={{
-              width: 28, height: 28, borderRadius: 8,
+              width: 32, height: 32, borderRadius: 8,
               background: "rgba(255,255,255,0.06)", border: "none",
-              display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer"
+              display: "flex", alignItems: "center", justifyContent: "center",
+              cursor: "pointer", flexShrink: 0,
             }}
           >
             <X style={{ width: 15, height: 15, color: "#9ca3af" }} />
@@ -93,16 +152,11 @@ function GenrePopup({ onClose }: { onClose: () => void }) {
         </div>
 
         {/* Scroll area */}
-        <div style={{ overflowY: "auto", flex: 1, WebkitOverflowScrolling: "touch" as any, padding: "8px 12px 32px" }}>
+        <div className="nimeka-genre-scroll">
           {isLoading ? (
-            // Skeleton
             <div style={{ display: "flex", flexDirection: "column", gap: 8, paddingTop: 8 }}>
               {Array.from({ length: 16 }).map((_, i) => (
-                <div key={i} style={{
-                  height: 44, borderRadius: 10,
-                  background: "rgba(255,255,255,0.05)",
-                  animation: "pulse 1.4s ease-in-out infinite",
-                }} />
+                <div key={i} className="nimeka-skeleton-item" />
               ))}
             </div>
           ) : genres.length === 0 ? (
@@ -112,20 +166,14 @@ function GenrePopup({ onClose }: { onClose: () => void }) {
                 onClick={() => refetch()}
                 style={{
                   padding: "8px 20px", background: "#7c3aed", color: "#fff",
-                  border: "none", borderRadius: 8, fontSize: 14, cursor: "pointer"
+                  border: "none", borderRadius: 8, fontSize: 14, cursor: "pointer",
                 }}
               >
                 Muat Ulang
               </button>
             </div>
           ) : (
-            // Genre list — dua kolom, 100% inline style
-            <div style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: 8,
-              paddingTop: 8,
-            }}>
+            <div className="nimeka-genre-grid">
               {genres.map((g: any, i: number) => {
                 const id = String(g.genreId || g.slug || g.id || i);
                 const name = String(g.title || g.name || id);
@@ -135,12 +183,7 @@ function GenrePopup({ onClose }: { onClose: () => void }) {
                     key={`${id}-${i}`}
                     to={`/genre/${id}`}
                     onClick={onClose}
-                    style={{
-                      display: "flex", alignItems: "center", gap: 8,
-                      padding: "10px 12px", borderRadius: 10, textDecoration: "none",
-                      backgroundColor: "rgba(255,255,255,0.04)",
-                      border: "1px solid rgba(255,255,255,0.07)",
-                    }}
+                    className="nimeka-genre-item"
                   >
                     <Tag style={{ width: 13, height: 13, flexShrink: 0, color: iconColor }} />
                     <span style={{
@@ -156,17 +199,6 @@ function GenrePopup({ onClose }: { onClose: () => void }) {
           )}
         </div>
       </div>
-
-      <style>{`
-        @keyframes sheetUp {
-          from { transform: translateY(100%); }
-          to   { transform: translateY(0); }
-        }
-        @keyframes pulse {
-          0%, 100% { opacity: 0.5; }
-          50% { opacity: 1; }
-        }
-      `}</style>
     </div>
   );
 
@@ -224,7 +256,7 @@ export default function Search() {
           </div>
         </div>
 
-        {/* Genre Button — static Tailwind class, aman */}
+        {/* Genre Button */}
         <button
           onClick={() => setShowGenre(true)}
           className="w-full flex items-center justify-between px-4 py-3 mb-5 bg-[#1a1a2e] border border-white/10 rounded-xl hover:border-purple-500/30 active:scale-[0.99] transition-all"
@@ -291,7 +323,6 @@ export default function Search() {
         )}
       </main>
 
-      {/* Genre Popup — rendered via Portal ke document.body */}
       {showGenre && <GenrePopup onClose={() => setShowGenre(false)} />}
 
       <BottomNav />
