@@ -1,10 +1,10 @@
-import { useState, useCallback, useRef } from "react";
+import { useState } from "react";
 import { trpc } from "@/providers/trpc";
 import Header from "@/components/layout/Header";
 import BottomNav from "@/components/layout/BottomNav";
 import AnimeCard from "@/components/AnimeCard";
 import { SkeletonGrid } from "@/components/LoadingSpinner";
-import { Search as SearchIcon, X, Loader2, Compass, Tag, ChevronRight, ArrowLeft } from "lucide-react";
+import { Search as SearchIcon, X, Loader2, ArrowLeft } from "lucide-react";
 import { useDebounce } from "@/hooks/useDebounce";
 import { Link } from "react-router";
 
@@ -16,14 +16,6 @@ const popularKeywords = [
   "Haikyuu", "Sword Art Online",
 ];
 
-const ICON_COLORS = [
-  "#f87171","#4ade80","#facc15","#c084fc","#60a5fa",
-  "#f472b6","#22d3ee","#818cf8","#fb923c","#34d399",
-  "#a78bfa","#2dd4bf","#fbbf24","#fb7185","#e879f9",
-];
-
-// Genre page — tidak pakai popup/portal/fixed overlay sama sekali
-// Langsung render sebagai page terpisah dalam komponen yang sama
 function GenrePage({ onClose }: { onClose: () => void }) {
   const { data, isLoading, refetch } = trpc.anime.genres.useQuery();
 
@@ -35,77 +27,64 @@ function GenrePage({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <div className="min-h-screen bg-[#0f0f1a] text-white pb-20">
+    <div style={{ minHeight: "100vh", backgroundColor: "#0f0f1a", color: "#fff", paddingBottom: 80 }}>
       <Header />
-      <main className="max-w-7xl mx-auto px-3 sm:px-4 pt-4">
-        {/* Back button */}
-        <div className="flex items-center gap-3 mb-5">
-          <button
-            onClick={onClose}
-            className="flex items-center gap-2 px-3 py-2 bg-[#1a1a2e] text-gray-300 rounded-xl hover:bg-[#252540] transition-colors text-sm border border-white/5"
-          >
-            <ArrowLeft className="w-4 h-4" />
+      <div style={{ maxWidth: 600, margin: "0 auto", padding: "16px 12px" }}>
+        {/* Header */}
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+          <button onClick={onClose} style={{
+            display: "flex", alignItems: "center", gap: 6,
+            padding: "8px 12px", borderRadius: 10,
+            background: "#1a1a2e", border: "1px solid rgba(255,255,255,0.08)",
+            color: "#d1d5db", fontSize: 13, cursor: "pointer"
+          }}>
+            <ArrowLeft style={{ width: 15, height: 15 }} />
             Kembali
           </button>
-          <div className="flex items-center gap-2">
-            <Compass className="w-5 h-5 text-purple-400" />
-            <h1 className="text-lg font-bold">Daftar Genre</h1>
-          </div>
-          {!isLoading && (
-            <button
-              onClick={() => refetch()}
-              className="ml-auto p-2 text-gray-500 hover:text-white transition-colors"
-              title="Refresh"
-            >
-              <X className="w-4 h-4 rotate-45" />
-            </button>
-          )}
+          <span style={{ fontWeight: 700, fontSize: 16 }}>Daftar Genre</span>
         </div>
 
         {/* Loading */}
         {isLoading && (
-          <div className="grid grid-cols-2 gap-2">
-            {Array.from({ length: 16 }).map((_, i) => (
-              <div key={i} className="h-11 rounded-xl bg-white/5 animate-pulse" />
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {Array.from({ length: 14 }).map((_, i) => (
+              <div key={i} style={{ height: 44, borderRadius: 10, background: "rgba(255,255,255,0.05)" }} />
             ))}
           </div>
         )}
 
-        {/* Error / empty */}
+        {/* Empty */}
         {!isLoading && genres.length === 0 && (
-          <div className="text-center py-16">
-            <Compass className="w-12 h-12 text-gray-600 mx-auto mb-3" />
-            <p className="text-gray-500 mb-4">Genre tidak tersedia</p>
-            <button
-              onClick={() => refetch()}
-              className="px-5 py-2 bg-purple-600 text-white text-sm rounded-xl hover:bg-purple-700 transition-colors"
-            >
-              Muat Ulang
-            </button>
+          <div style={{ textAlign: "center", padding: "60px 0" }}>
+            <p style={{ color: "#6b7280", marginBottom: 12 }}>Genre tidak tersedia</p>
+            <button onClick={() => refetch()} style={{
+              padding: "8px 20px", background: "#7c3aed", color: "#fff",
+              borderRadius: 10, border: "none", cursor: "pointer", fontSize: 13
+            }}>Muat Ulang</button>
           </div>
         )}
 
-        {/* Genre grid */}
+        {/* Genre list — flat, no colors, no transitions */}
         {!isLoading && genres.length > 0 && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             {genres.map((g: any, i: number) => {
               const id = String(g.genreId || g.slug || g.id || i);
               const name = String(g.title || g.name || id);
-              const iconColor = ICON_COLORS[i % ICON_COLORS.length];
               return (
-                <Link
-                  key={`${id}-${i}`}
-                  to={`/genre/${id}`}
-                  className="flex items-center gap-2 px-3 py-2.5 rounded-xl hover:border-purple-500/30 transition-colors" style={{ backgroundColor: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", textDecoration: "none" }}
-                >
-                  <Tag style={{ width: 13, height: 13, flexShrink: 0, color: iconColor }} />
-                  <span className="text-sm font-medium text-gray-200 truncate">{name}</span>
+                <Link key={`${id}-${i}`} to={`/genre/${id}`} style={{
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                  padding: "12px 14px", borderRadius: 10, textDecoration: "none",
+                  background: "#1a1a2e", border: "1px solid rgba(255,255,255,0.06)",
+                  color: "#e5e7eb", fontSize: 14, fontWeight: 500
+                }}>
+                  <span>{name}</span>
+                  <span style={{ color: "#6b7280", fontSize: 12 }}>›</span>
                 </Link>
               );
             })}
           </div>
         )}
-      </main>
+      </div>
       <BottomNav />
     </div>
   );
