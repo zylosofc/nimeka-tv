@@ -59,11 +59,13 @@ async function findDirectStream(qualities: QualityServer[]): Promise<{ url: stri
     servers: q.serverList.map(s => s.title)
   })));
 
+  // Coba semua server dari quality tertinggi, tanpa filter keyword
   for (const q of sorted) {
     for (const s of q.serverList) {
       const url = await fetchStreamUrl(s.serverId);
+      console.log(`Trying ${q.title} / ${s.title}:`, url?.slice(0, 80));
       if (url && isDirectStream(url)) {
-        console.log("✅ Direct stream found:", url, "quality:", q.title, "server:", s.title);
+        console.log("✅ Direct stream:", q.title, s.title, url.slice(0, 80));
         return { url, label: q.title };
       }
     }
