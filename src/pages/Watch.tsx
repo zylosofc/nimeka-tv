@@ -34,6 +34,7 @@ export default function Watch() {
   const [progressLoaded, setProgressLoaded] = useState(false);
   const [saved, setSaved] = useState(false);
   const [liked, setLiked] = useState(false);
+  const [actualQuality, setActualQuality] = useState<string | null>(null);
 
   const { data, isLoading } = trpc.anime.episode.useQuery(
     { slug: slug || "" },
@@ -64,7 +65,7 @@ export default function Watch() {
   // Eps aktif dari episodeList
   const currentEpFromList = episodeList.find((e: any) => e.episodeId === slug);
   const currentEps = episode?.eps || currentEpFromList?.eps || currentEpFromList?.episodeNumber || null;
-  const resolution = episode?.defaultQuality || qualities?.[0]?.title || null;
+  const resolution = actualQuality || episode?.defaultQuality || qualities?.[0]?.title || null;
 
   useEffect(() => {
     if (!slug) return;
@@ -131,8 +132,9 @@ export default function Watch() {
           <VideoPlayer
             defaultUrl={episode.defaultStreamingUrl}
             qualities={qualities}
-            startAtSeconds={startAtSeconds}
-            onProgress={handleProgress}
+            resumeTime={startAtSeconds}
+            onTimeUpdate={handleProgress}
+            onQualityFound={(label) => setActualQuality(label)}
           />
         )}
 

@@ -8,6 +8,7 @@ interface VideoPlayerProps {
   qualities: QualityServer[];
   resumeTime?: number;
   onTimeUpdate?: (time: number) => void;
+  onQualityFound?: (label: string) => void;
 }
 
 const QUALITY_ORDER = ["1080p", "720p", "480p", "360p", "HD", "SD"];
@@ -85,7 +86,7 @@ async function findDirectStream(qualities: QualityServer[]): Promise<{ url: stri
   return null;
 }
 
-export default function VideoPlayer({ defaultUrl, qualities, resumeTime, onTimeUpdate }: VideoPlayerProps) {
+export default function VideoPlayer({ defaultUrl, qualities, resumeTime, onTimeUpdate, onQualityFound }: VideoPlayerProps) {
   const [streamUrl, setStreamUrl] = useState<string | null>(null);
   const [isDirect, setIsDirect] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -108,6 +109,7 @@ export default function VideoPlayer({ defaultUrl, qualities, resumeTime, onTimeU
         if (result) {
           setStreamUrl(result.url);
           setIsDirect(isDirectStream(result.url));
+          if (result.label) onQualityFound?.(result.label);
           setLoading(false);
           return;
         }
@@ -166,7 +168,7 @@ export default function VideoPlayer({ defaultUrl, qualities, resumeTime, onTimeU
   return (
     <div ref={wrapperRef}
       className="relative w-full bg-black rounded-xl overflow-hidden shadow-2xl"
-      style={{ aspectRatio: "16/9" }}
+      style={{ aspectRatio: isDirect ? undefined : "16/9" }}
     >
       {loading && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black z-10 gap-2">
