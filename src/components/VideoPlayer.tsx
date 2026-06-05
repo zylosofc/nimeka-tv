@@ -69,6 +69,8 @@ export default function VideoPlayer({ defaultUrl, qualities, resumeTime, onTimeU
       if (best?.serverId) {
         const url = await fetchEmbedUrl(best.serverId);
         if (url) {
+          console.log("=== STREAM URL ===", url);
+          console.log("=== SERVER ===", best.title, best.serverId);
           const finalUrl =
             resumeTime && resumeTime > 5
               ? url + (url.includes("?") ? `&t=${Math.floor(resumeTime)}` : `?t=${Math.floor(resumeTime)}`)
