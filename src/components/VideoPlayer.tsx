@@ -52,6 +52,13 @@ async function findDirectStream(qualities: QualityServer[]): Promise<{ url: stri
     if (ai === -1) return 1; if (bi === -1) return -1;
     return ai - bi;
   });
+
+  // Debug: log semua quality dan server yang tersedia
+  console.log("=== AVAILABLE QUALITIES ===", sorted.map(q => ({
+    quality: q.title,
+    servers: q.serverList.map(s => s.title)
+  })));
+
   for (const q of sorted) {
     for (const s of q.serverList) {
       const url = await fetchStreamUrl(s.serverId);
