@@ -5,9 +5,8 @@ import HeroBanner from "@/components/HeroBanner";
 import AnimeCard from "@/components/AnimeCard";
 import SectionTitle from "@/components/SectionTitle";
 import { SkeletonCard, SkeletonGrid } from "@/components/LoadingSpinner";
-import { Flame, Clock, TrendingUp, History, Play } from "lucide-react";
+import { Flame, Clock, TrendingUp } from "lucide-react";
 import { Link } from "react-router";
-import { useEffect, useState } from "react";
 
 interface AnimeItem {
   title: string;
@@ -22,29 +21,11 @@ interface AnimeItem {
   latestReleaseDate?: string;
 }
 
-interface WatchHistoryItem {
-  animeId: string;
-  title: string;
-  poster: string;
-  episodeId: string;
-  episodeNum: string | number;
-  watchedAt: number;
-}
-
-function useWatchHistory(): WatchHistoryItem[] {
-  const [history, setHistory] = useState<WatchHistoryItem[]>([]);
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem("nimeka_watch_history");
-      if (raw) setHistory(JSON.parse(raw));
-    } catch { /* ignore */ }
-  }, []);
-  return history;
-}
 
 export default function Home() {
   const { data: homeData, isLoading: ongoingLoading } = trpc.anime.home.useQuery();
-  const watchHistory = useWatchHistory();
+
+        {/* ── Anime Ongoing (horizontal scroll) ── */}
 
   // home API returns { ongoing, completed, newUpdate, hot }
   const homeObj = homeData as any;
@@ -72,90 +53,6 @@ export default function Home() {
           <div className="w-full h-[280px] sm:h-[340px] rounded-2xl bg-gray-800 animate-pulse mb-6" />
         ) : (
           <HeroBanner animeList={ongoing.slice(0, 5)} />
-        )}
-
-        {/* ── Terakhir Ditonton ── */}
-        {watchHistory.length > 0 && (
-          <section className="mb-8">
-            <div className="flex items-center gap-2 mb-3">
-              <History className="w-4 h-4 text-purple-400" />
-              <span className="text-base font-bold">Terakhir Ditonton</span>
-            </div>
-            <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-              {watchHistory.slice(0, 10).map((item) => (
-                <Link
-                  key={item.episodeId}
-                  to={`/watch/${item.episodeId}`}
-                  className="flex-shrink-0 w-[110px] group"
-                  style={{ textDecoration: "none" }}
-                >
-                  {/* Poster */}
-                  <div
-                    style={{
-                      position: "relative",
-                      width: 110,
-                      height: 147,
-                      borderRadius: 12,
-                      overflow: "hidden",
-                      background: "#1a1a2e",
-                      flexShrink: 0,
-                    }}
-                  >
-                    {item.poster ? (
-                      <img
-                        src={item.poster}
-                        alt={item.title}
-                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                        loading="lazy"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = "none";
-                        }}
-                      />
-                    ) : (
-                      <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        <Play style={{ width: 28, height: 28, color: "#6b7280" }} />
-                      </div>
-                    )}
-                    {/* Overlay */}
-                    <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.75) 0%, transparent 50%)" }} />
-                    {/* EP badge */}
-                    {item.episodeNum && (
-                      <span style={{
-                        position: "absolute", bottom: 6, left: 6,
-                        fontSize: 10, fontWeight: 600, padding: "2px 6px",
-                        background: "#7c3aed", color: "#fff", borderRadius: 5
-                      }}>
-                        EP {item.episodeNum}
-                      </span>
-                    )}
-                    {/* Play icon on hover */}
-                    <div style={{
-                      position: "absolute", inset: 0,
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      opacity: 0, transition: "opacity 0.2s"
-                    }} className="group-hover:!opacity-100">
-                      <div style={{
-                        width: 36, height: 36, borderRadius: "50%",
-                        background: "rgba(255,255,255,0.2)", backdropFilter: "blur(4px)",
-                        display: "flex", alignItems: "center", justifyContent: "center"
-                      }}>
-                        <Play style={{ width: 18, height: 18, color: "#fff", fill: "#fff" }} />
-                      </div>
-                    </div>
-                  </div>
-                  {/* Title */}
-                  <p style={{
-                    marginTop: 6, fontSize: 11, color: "#d1d5db",
-                    overflow: "hidden", display: "-webkit-box",
-                    WebkitLineClamp: 2, WebkitBoxOrient: "vertical",
-                    lineHeight: 1.4
-                  }}>
-                    {item.title || ("Episode " + item.episodeNum)}
-                  </p>
-                </Link>
-              ))}
-            </div>
-          </section>
         )}
 
         {/* ── Anime Ongoing (horizontal scroll) ── */}
