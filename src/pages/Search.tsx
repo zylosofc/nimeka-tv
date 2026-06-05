@@ -16,93 +16,122 @@ const popularKeywords = [
   "Haikyuu", "Sword Art Online",
 ];
 
-const genreColors = [
-  "bg-red-500/10 text-red-300 border-red-500/20 hover:bg-red-500/20",
-  "bg-green-500/10 text-green-300 border-green-500/20 hover:bg-green-500/20",
-  "bg-yellow-500/10 text-yellow-300 border-yellow-500/20 hover:bg-yellow-500/20",
-  "bg-purple-500/10 text-purple-300 border-purple-500/20 hover:bg-purple-500/20",
-  "bg-blue-500/10 text-blue-300 border-blue-500/20 hover:bg-blue-500/20",
-  "bg-pink-500/10 text-pink-300 border-pink-500/20 hover:bg-pink-500/20",
-  "bg-cyan-500/10 text-cyan-300 border-cyan-500/20 hover:bg-cyan-500/20",
-  "bg-orange-500/10 text-orange-300 border-orange-500/20 hover:bg-orange-500/20",
-  "bg-emerald-500/10 text-emerald-300 border-emerald-500/20 hover:bg-emerald-500/20",
-  "bg-violet-500/10 text-violet-300 border-violet-500/20 hover:bg-violet-500/20",
-  "bg-rose-500/10 text-rose-300 border-rose-500/20 hover:bg-rose-500/20",
-  "bg-teal-500/10 text-teal-300 border-teal-500/20 hover:bg-teal-500/20",
-  "bg-indigo-500/10 text-indigo-300 border-indigo-500/20 hover:bg-indigo-500/20",
-  "bg-amber-500/10 text-amber-300 border-amber-500/20 hover:bg-amber-500/20",
+// Inline style — tidak di-purge oleh Tailwind production build
+const GENRE_COLORS = [
+  { bg: "rgba(239,68,68,0.08)", border: "rgba(239,68,68,0.2)", text: "#fca5a5" },
+  { bg: "rgba(34,197,94,0.08)", border: "rgba(34,197,94,0.2)", text: "#86efac" },
+  { bg: "rgba(234,179,8,0.08)", border: "rgba(234,179,8,0.2)", text: "#fde047" },
+  { bg: "rgba(168,85,247,0.08)", border: "rgba(168,85,247,0.2)", text: "#d8b4fe" },
+  { bg: "rgba(59,130,246,0.08)", border: "rgba(59,130,246,0.2)", text: "#93c5fd" },
+  { bg: "rgba(236,72,153,0.08)", border: "rgba(236,72,153,0.2)", text: "#f9a8d4" },
+  { bg: "rgba(6,182,212,0.08)", border: "rgba(6,182,212,0.2)", text: "#67e8f9" },
+  { bg: "rgba(249,115,22,0.08)", border: "rgba(249,115,22,0.2)", text: "#fdba74" },
+  { bg: "rgba(16,185,129,0.08)", border: "rgba(16,185,129,0.2)", text: "#6ee7b7" },
+  { bg: "rgba(139,92,246,0.08)", border: "rgba(139,92,246,0.2)", text: "#c4b5fd" },
+  { bg: "rgba(244,63,94,0.08)", border: "rgba(244,63,94,0.2)", text: "#fda4af" },
+  { bg: "rgba(20,184,166,0.08)", border: "rgba(20,184,166,0.2)", text: "#5eead4" },
+  { bg: "rgba(99,102,241,0.08)", border: "rgba(99,102,241,0.2)", text: "#a5b4fc" },
+  { bg: "rgba(245,158,11,0.08)", border: "rgba(245,158,11,0.2)", text: "#fcd34d" },
 ];
 
 function GenreSheet({ onClose }: { onClose: () => void }) {
   const { data, isLoading, refetch } = trpc.anime.genres.useQuery();
-  const genres = (data as any[]) || [];
+  let genres: any[] = [];
+  if (Array.isArray(data)) genres = data;
+  else if (data && typeof data === "object") {
+    const d = data as any;
+    genres = d.genreList || d.genres || d.data || [];
+  }
 
   return (
-    // Backdrop — pakai pointer-events instead of overflow:hidden agar tidak glitch
     <div
       className="fixed inset-0 z-50 flex flex-col justify-end"
-      style={{ backgroundColor: "rgba(0,0,0,0.6)" }}
+      style={{ backgroundColor: "rgba(0,0,0,0.65)" }}
       onClick={onClose}
     >
-      {/* Sheet — stop propagation agar klik di dalam tidak nutup */}
       <div
-        className="bg-[#13131f] rounded-t-2xl border-t border-white/10 flex flex-col"
         style={{
+          background: "#13131f",
+          borderTop: "1px solid rgba(255,255,255,0.08)",
+          borderRadius: "20px 20px 0 0",
           maxHeight: "78vh",
+          display: "flex",
+          flexDirection: "column",
           animation: "slideUp 0.22s ease-out",
-          // Penting: akan-tetap dalam stacking context sendiri
           isolation: "isolate",
         }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Drag handle */}
-        <div className="flex-shrink-0 flex justify-center pt-2.5 pb-1">
-          <div className="w-9 h-1 bg-white/20 rounded-full" />
+        <div style={{ display: "flex", justifyContent: "center", paddingTop: 10, paddingBottom: 4 }}>
+          <div style={{ width: 36, height: 4, background: "rgba(255,255,255,0.18)", borderRadius: 99 }} />
         </div>
 
         {/* Header */}
-        <div className="flex-shrink-0 flex items-center justify-between px-4 pb-3 border-b border-white/5">
-          <div className="flex items-center gap-2">
-            <Compass className="w-5 h-5 text-purple-400" />
-            <h2 className="text-base font-bold text-white">Daftar Genre</h2>
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "0 16px 12px", borderBottom: "1px solid rgba(255,255,255,0.05)"
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <Compass style={{ width: 20, height: 20, color: "#a78bfa" }} />
+            <h2 style={{ fontSize: 15, fontWeight: 700, color: "#fff", margin: 0 }}>Daftar Genre</h2>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
-            <X className="w-4 h-4 text-gray-400" />
+          <button
+            onClick={onClose}
+            style={{ padding: 6, borderRadius: 8, background: "transparent", border: "none", cursor: "pointer" }}
+          >
+            <X style={{ width: 16, height: 16, color: "#9ca3af" }} />
           </button>
         </div>
 
         {/* Scrollable genre list */}
-        <div className="overflow-y-auto flex-1 px-4 py-3">
+        <div style={{ overflowY: "auto", flex: 1, padding: "12px 16px" }}>
           {isLoading ? (
-            <div className="flex flex-col gap-2">
-              {Array.from({ length: 12 }).map((_, i) => (
-                <div key={i} className="h-11 rounded-xl bg-white/5 animate-pulse" />
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {Array.from({ length: 14 }).map((_, i) => (
+                <div key={i} style={{ height: 44, borderRadius: 12, background: "rgba(255,255,255,0.05)" }} />
               ))}
             </div>
           ) : genres.length === 0 ? (
-            <div className="text-center py-10">
-              <p className="text-gray-500 text-sm mb-3">Genre tidak tersedia</p>
-              <button onClick={() => refetch()} className="px-4 py-2 bg-purple-600 text-white text-sm rounded-lg">
+            <div style={{ textAlign: "center", padding: "40px 0" }}>
+              <p style={{ color: "#6b7280", fontSize: 14, marginBottom: 12 }}>Genre tidak tersedia</p>
+              <button
+                onClick={() => refetch()}
+                style={{ padding: "8px 20px", background: "#7c3aed", color: "#fff", border: "none", borderRadius: 8, fontSize: 14, cursor: "pointer" }}
+              >
                 Muat Ulang
               </button>
             </div>
           ) : (
-            <div className="flex flex-col gap-1.5 pb-8">
+            <div style={{ display: "flex", flexDirection: "column", gap: 6, paddingBottom: 32 }}>
               {genres.map((g: any, i: number) => {
                 const id = String(g.genreId || g.slug || g.id || i);
                 const name = String(g.title || g.name || id);
+                const color = GENRE_COLORS[i % GENRE_COLORS.length];
                 return (
                   <Link
                     key={`${id}-${i}`}
                     to={`/genre/${id}`}
                     onClick={onClose}
-                    className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-[#1e1e30] border border-white/5 active:bg-[#252545] active:scale-[0.98] transition-all"
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "10px 12px",
+                      borderRadius: 12,
+                      background: color.bg,
+                      border: `1px solid ${color.border}`,
+                      textDecoration: "none",
+                      transition: "opacity 0.15s",
+                    }}
                   >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <Tag className="w-3.5 h-3.5 flex-shrink-0 text-purple-400" />
-                      <span className="text-sm font-medium text-gray-200 truncate">{name}</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+                      <Tag style={{ width: 14, height: 14, flexShrink: 0, color: color.text }} />
+                      <span style={{ fontSize: 14, fontWeight: 500, color: "#e5e7eb", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {name}
+                      </span>
                     </div>
-                    <ChevronRight className="w-3.5 h-3.5 flex-shrink-0 text-gray-600" />
+                    <ChevronRight style={{ width: 14, height: 14, flexShrink: 0, color: "#4b5563" }} />
                   </Link>
                 );
               })}
@@ -110,6 +139,13 @@ function GenreSheet({ onClose }: { onClose: () => void }) {
           )}
         </div>
       </div>
+
+      <style>{`
+        @keyframes slideUp {
+          from { transform: translateY(100%); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
+      `}</style>
     </div>
   );
 }
@@ -138,7 +174,6 @@ export default function Search() {
       <Header />
 
       <main className="max-w-7xl mx-auto px-3 sm:px-4 pt-4">
-
         {/* Search Input */}
         <div className="relative mb-4">
           <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
@@ -148,6 +183,7 @@ export default function Search() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Cari anime..."
+            autoFocus
             autoComplete="off"
             autoCorrect="off"
             spellCheck={false}
@@ -216,7 +252,7 @@ export default function Search() {
             {isSearching ? (
               <SkeletonGrid count={8} />
             ) : searchResults.length > 0 ? (
-              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 sm:gap-3">
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 sm:gap-3">
                 {searchResults.map((anime: any, i: number) => (
                   <AnimeCard key={anime.animeId || i} anime={anime} index={i} variant="grid" />
                 ))}
