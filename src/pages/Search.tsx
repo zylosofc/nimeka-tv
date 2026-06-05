@@ -1,11 +1,10 @@
-import { useState, useCallback, useRef, useEffect } from "react";
-import { createPortal } from "react-dom";
+import { useState, useCallback, useRef } from "react";
 import { trpc } from "@/providers/trpc";
 import Header from "@/components/layout/Header";
 import BottomNav from "@/components/layout/BottomNav";
 import AnimeCard from "@/components/AnimeCard";
 import { SkeletonGrid } from "@/components/LoadingSpinner";
-import { Search as SearchIcon, X, Loader2, Compass, Tag, ChevronRight } from "lucide-react";
+import { Search as SearchIcon, X, Loader2, Compass, Tag, ChevronRight, ArrowLeft } from "lucide-react";
 import { useDebounce } from "@/hooks/useDebounce";
 import { Link } from "react-router";
 
@@ -23,65 +22,9 @@ const ICON_COLORS = [
   "#a78bfa","#2dd4bf","#fbbf24","#fb7185","#e879f9",
 ];
 
-// Inject keyframes sekali ke <head> — bukan di dalam portal
-const SHEET_STYLE_ID = "nimeka-genre-sheet-style";
-function ensureSheetStyles() {
-  if (document.getElementById(SHEET_STYLE_ID)) return;
-  const s = document.createElement("style");
-  s.id = SHEET_STYLE_ID;
-  s.textContent = `
-    @keyframes nimekaSheetUp {
-      from { transform: translateY(100%); }
-      to   { transform: translateY(0); }
-    }
-    @keyframes nimekaPulse {
-      0%, 100% { opacity: 0.5; }
-      50% { opacity: 1; }
-    }
-    .nimeka-genre-sheet {
-      background-color: #12121e;
-      border-top: 1px solid rgba(255,255,255,0.08);
-      border-radius: 20px 20px 0 0;
-      max-height: 80vh;
-      display: flex;
-      flex-direction: column;
-      animation: nimekaSheetUp 0.25s cubic-bezier(0.32,0.72,0,1) both;
-      will-change: transform;
-      -webkit-overflow-scrolling: touch;
-    }
-    .nimeka-genre-scroll {
-      overflow-y: auto;
-      flex: 1;
-      padding: 8px 12px 40px;
-      -webkit-overflow-scrolling: touch;
-    }
-    .nimeka-genre-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-      padding-top: 8px;
-    }
-    .nimeka-genre-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 12px;
-      border-radius: 10px;
-      text-decoration: none;
-      background-color: rgba(255,255,255,0.04);
-      border: 1px solid rgba(255,255,255,0.07);
-    }
-    .nimeka-skeleton-item {
-      height: 44px;
-      border-radius: 10px;
-      background: rgba(255,255,255,0.05);
-      animation: nimekaPulse 1.4s ease-in-out infinite;
-    }
-  `;
-  document.head.appendChild(s);
-}
-
-function GenrePopup({ onClose }: { onClose: () => void }) {
+// Genre page — tidak pakai popup/portal/fixed overlay sama sekali
+// Langsung render sebagai page terpisah dalam komponen yang sama
+function GenrePage({ onClose }: { onClose: () => void }) {
   const { data, isLoading, refetch } = trpc.anime.genres.useQuery();
 
   let genres: any[] = [];
@@ -91,118 +34,81 @@ function GenrePopup({ onClose }: { onClose: () => void }) {
     genres = d.genreList || d.genres || d.list || d.data || [];
   }
 
-  useEffect(() => {
-    ensureSheetStyles();
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = prev; };
-  }, []);
-
-  // Close on escape key
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [onClose]);
-
-  const popup = (
-    <div
-      onClick={onClose}
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 9999,
-        backgroundColor: "rgba(0,0,0,0.65)",
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "flex-end",
-      }}
-    >
-      <div
-        className="nimeka-genre-sheet"
-        onClick={e => e.stopPropagation()}
-      >
-        {/* Handle bar */}
-        <div style={{ display: "flex", justifyContent: "center", padding: "10px 0 4px", flexShrink: 0 }}>
-          <div style={{ width: 36, height: 4, background: "rgba(255,255,255,0.2)", borderRadius: 99 }} />
-        </div>
-
-        {/* Header */}
-        <div style={{
-          display: "flex", alignItems: "center", justifyContent: "space-between",
-          padding: "0 16px 12px 16px",
-          borderBottom: "1px solid rgba(255,255,255,0.06)",
-          flexShrink: 0,
-        }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <Compass style={{ width: 18, height: 18, color: "#a78bfa" }} />
-            <span style={{ fontSize: 15, fontWeight: 700, color: "#fff" }}>Daftar Genre</span>
-          </div>
+  return (
+    <div className="min-h-screen bg-[#0f0f1a] text-white pb-20">
+      <Header />
+      <main className="max-w-7xl mx-auto px-3 sm:px-4 pt-4">
+        {/* Back button */}
+        <div className="flex items-center gap-3 mb-5">
           <button
             onClick={onClose}
-            style={{
-              width: 32, height: 32, borderRadius: 8,
-              background: "rgba(255,255,255,0.06)", border: "none",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              cursor: "pointer", flexShrink: 0,
-            }}
+            className="flex items-center gap-2 px-3 py-2 bg-[#1a1a2e] text-gray-300 rounded-xl hover:bg-[#252540] transition-colors text-sm border border-white/5"
           >
-            <X style={{ width: 15, height: 15, color: "#9ca3af" }} />
+            <ArrowLeft className="w-4 h-4" />
+            Kembali
           </button>
-        </div>
-
-        {/* Scroll area */}
-        <div className="nimeka-genre-scroll">
-          {isLoading ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: 8, paddingTop: 8 }}>
-              {Array.from({ length: 16 }).map((_, i) => (
-                <div key={i} className="nimeka-skeleton-item" />
-              ))}
-            </div>
-          ) : genres.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "40px 0" }}>
-              <p style={{ color: "#6b7280", fontSize: 14, marginBottom: 12 }}>Genre tidak tersedia</p>
-              <button
-                onClick={() => refetch()}
-                style={{
-                  padding: "8px 20px", background: "#7c3aed", color: "#fff",
-                  border: "none", borderRadius: 8, fontSize: 14, cursor: "pointer",
-                }}
-              >
-                Muat Ulang
-              </button>
-            </div>
-          ) : (
-            <div className="nimeka-genre-grid">
-              {genres.map((g: any, i: number) => {
-                const id = String(g.genreId || g.slug || g.id || i);
-                const name = String(g.title || g.name || id);
-                const iconColor = ICON_COLORS[i % ICON_COLORS.length];
-                return (
-                  <Link
-                    key={`${id}-${i}`}
-                    to={`/genre/${id}`}
-                    onClick={onClose}
-                    className="nimeka-genre-item"
-                  >
-                    <Tag style={{ width: 13, height: 13, flexShrink: 0, color: iconColor }} />
-                    <span style={{
-                      fontSize: 13, fontWeight: 500, color: "#d1d5db",
-                      overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                    }}>
-                      {name}
-                    </span>
-                  </Link>
-                );
-              })}
-            </div>
+          <div className="flex items-center gap-2">
+            <Compass className="w-5 h-5 text-purple-400" />
+            <h1 className="text-lg font-bold">Daftar Genre</h1>
+          </div>
+          {!isLoading && (
+            <button
+              onClick={() => refetch()}
+              className="ml-auto p-2 text-gray-500 hover:text-white transition-colors"
+              title="Refresh"
+            >
+              <X className="w-4 h-4 rotate-45" />
+            </button>
           )}
         </div>
-      </div>
+
+        {/* Loading */}
+        {isLoading && (
+          <div className="grid grid-cols-2 gap-2">
+            {Array.from({ length: 16 }).map((_, i) => (
+              <div key={i} className="h-11 rounded-xl bg-white/5 animate-pulse" />
+            ))}
+          </div>
+        )}
+
+        {/* Error / empty */}
+        {!isLoading && genres.length === 0 && (
+          <div className="text-center py-16">
+            <Compass className="w-12 h-12 text-gray-600 mx-auto mb-3" />
+            <p className="text-gray-500 mb-4">Genre tidak tersedia</p>
+            <button
+              onClick={() => refetch()}
+              className="px-5 py-2 bg-purple-600 text-white text-sm rounded-xl hover:bg-purple-700 transition-colors"
+            >
+              Muat Ulang
+            </button>
+          </div>
+        )}
+
+        {/* Genre grid */}
+        {!isLoading && genres.length > 0 && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {genres.map((g: any, i: number) => {
+              const id = String(g.genreId || g.slug || g.id || i);
+              const name = String(g.title || g.name || id);
+              const iconColor = ICON_COLORS[i % ICON_COLORS.length];
+              return (
+                <Link
+                  key={`${id}-${i}`}
+                  to={`/genre/${id}`}
+                  className="flex items-center gap-2 px-3 py-2.5 rounded-xl hover:border-purple-500/30 transition-colors" style={{ backgroundColor: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", textDecoration: "none" }}
+                >
+                  <Tag style={{ width: 13, height: 13, flexShrink: 0, color: iconColor }} />
+                  <span className="text-sm font-medium text-gray-200 truncate">{name}</span>
+                </Link>
+              );
+            })}
+          </div>
+        )}
+      </main>
+      <BottomNav />
     </div>
   );
-
-  return createPortal(popup, document.body);
 }
 
 export default function Search() {
@@ -223,6 +129,11 @@ export default function Search() {
 
   const searchResults: any[] = (results as any[]) || [];
   const isSearching = isLoading || isFetching;
+
+  // Tampilkan genre page full (tidak pakai popup/overlay)
+  if (showGenre) {
+    return <GenrePage onClose={() => setShowGenre(false)} />;
+  }
 
   return (
     <div className="min-h-screen bg-[#0f0f1a] text-white pb-20">
@@ -322,8 +233,6 @@ export default function Search() {
           </div>
         )}
       </main>
-
-      {showGenre && <GenrePopup onClose={() => setShowGenre(false)} />}
 
       <BottomNav />
     </div>
