@@ -1,4 +1,5 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { trpc } from "@/providers/trpc";
 import Header from "@/components/layout/Header";
 import BottomNav from "@/components/layout/BottomNav";
@@ -16,80 +17,92 @@ const popularKeywords = [
   "Haikyuu", "Sword Art Online",
 ];
 
-// Inline style — tidak di-purge oleh Tailwind production build
-const GENRE_COLORS = [
-  { bg: "rgba(239,68,68,0.08)", border: "rgba(239,68,68,0.2)", text: "#fca5a5" },
-  { bg: "rgba(34,197,94,0.08)", border: "rgba(34,197,94,0.2)", text: "#86efac" },
-  { bg: "rgba(234,179,8,0.08)", border: "rgba(234,179,8,0.2)", text: "#fde047" },
-  { bg: "rgba(168,85,247,0.08)", border: "rgba(168,85,247,0.2)", text: "#d8b4fe" },
-  { bg: "rgba(59,130,246,0.08)", border: "rgba(59,130,246,0.2)", text: "#93c5fd" },
-  { bg: "rgba(236,72,153,0.08)", border: "rgba(236,72,153,0.2)", text: "#f9a8d4" },
-  { bg: "rgba(6,182,212,0.08)", border: "rgba(6,182,212,0.2)", text: "#67e8f9" },
-  { bg: "rgba(249,115,22,0.08)", border: "rgba(249,115,22,0.2)", text: "#fdba74" },
-  { bg: "rgba(16,185,129,0.08)", border: "rgba(16,185,129,0.2)", text: "#6ee7b7" },
-  { bg: "rgba(139,92,246,0.08)", border: "rgba(139,92,246,0.2)", text: "#c4b5fd" },
-  { bg: "rgba(244,63,94,0.08)", border: "rgba(244,63,94,0.2)", text: "#fda4af" },
-  { bg: "rgba(20,184,166,0.08)", border: "rgba(20,184,166,0.2)", text: "#5eead4" },
-  { bg: "rgba(99,102,241,0.08)", border: "rgba(99,102,241,0.2)", text: "#a5b4fc" },
-  { bg: "rgba(245,158,11,0.08)", border: "rgba(245,158,11,0.2)", text: "#fcd34d" },
+const ICON_COLORS = [
+  "#f87171","#4ade80","#facc15","#c084fc","#60a5fa",
+  "#f472b6","#22d3ee","#818cf8","#fb923c","#34d399",
+  "#a78bfa","#2dd4bf","#fbbf24","#fb7185","#e879f9",
 ];
 
-function GenreSheet({ onClose }: { onClose: () => void }) {
+// Genre popup — pakai createPortal + 100% inline style, ZERO Tailwind dynamic class
+function GenrePopup({ onClose }: { onClose: () => void }) {
   const { data, isLoading, refetch } = trpc.anime.genres.useQuery();
+  const sheetRef = useRef<HTMLDivElement>(null);
+
   let genres: any[] = [];
   if (Array.isArray(data)) genres = data;
   else if (data && typeof data === "object") {
     const d = data as any;
-    genres = d.genreList || d.genres || d.data || [];
+    genres = d.genreList || d.genres || d.list || d.data || [];
   }
 
-  return (
+  // Lock body scroll saat popup terbuka
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, []);
+
+  const popup = (
     <div
-      className="fixed inset-0 z-50 flex flex-col justify-end"
-      style={{ backgroundColor: "rgba(0,0,0,0.65)" }}
       onClick={onClose}
+      style={{
+        position: "fixed", inset: 0, zIndex: 9999,
+        backgroundColor: "rgba(0,0,0,0.7)",
+        display: "flex", flexDirection: "column", justifyContent: "flex-end",
+      }}
     >
       <div
+        ref={sheetRef}
+        onClick={e => e.stopPropagation()}
         style={{
-          background: "#13131f",
+          backgroundColor: "#12121e",
           borderTop: "1px solid rgba(255,255,255,0.08)",
           borderRadius: "20px 20px 0 0",
-          maxHeight: "78vh",
+          maxHeight: "80vh",
           display: "flex",
           flexDirection: "column",
-          animation: "slideUp 0.22s ease-out",
-          isolation: "isolate",
+          // Animasi pakai CSS transform — tidak pakai framer-motion
+          animation: "sheetUp 0.2s cubic-bezier(0.32,0.72,0,1)",
         }}
-        onClick={(e) => e.stopPropagation()}
       >
-        {/* Drag handle */}
-        <div style={{ display: "flex", justifyContent: "center", paddingTop: 10, paddingBottom: 4 }}>
-          <div style={{ width: 36, height: 4, background: "rgba(255,255,255,0.18)", borderRadius: 99 }} />
+        {/* Handle bar */}
+        <div style={{ display: "flex", justifyContent: "center", padding: "10px 0 4px" }}>
+          <div style={{ width: 36, height: 4, background: "rgba(255,255,255,0.2)", borderRadius: 99 }} />
         </div>
 
         {/* Header */}
         <div style={{
           display: "flex", alignItems: "center", justifyContent: "space-between",
-          padding: "0 16px 12px", borderBottom: "1px solid rgba(255,255,255,0.05)"
+          padding: "0 16px 12px 16px",
+          borderBottom: "1px solid rgba(255,255,255,0.06)"
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <Compass style={{ width: 20, height: 20, color: "#a78bfa" }} />
-            <h2 style={{ fontSize: 15, fontWeight: 700, color: "#fff", margin: 0 }}>Daftar Genre</h2>
+            <Compass style={{ width: 18, height: 18, color: "#a78bfa" }} />
+            <span style={{ fontSize: 15, fontWeight: 700, color: "#fff" }}>Daftar Genre</span>
           </div>
           <button
             onClick={onClose}
-            style={{ padding: 6, borderRadius: 8, background: "transparent", border: "none", cursor: "pointer" }}
+            style={{
+              width: 28, height: 28, borderRadius: 8,
+              background: "rgba(255,255,255,0.06)", border: "none",
+              display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer"
+            }}
           >
-            <X style={{ width: 16, height: 16, color: "#9ca3af" }} />
+            <X style={{ width: 15, height: 15, color: "#9ca3af" }} />
           </button>
         </div>
 
-        {/* Scrollable genre list */}
-        <div style={{ overflowY: "auto", flex: 1, padding: "12px 16px" }}>
+        {/* Scroll area */}
+        <div style={{ overflowY: "auto", flex: 1, WebkitOverflowScrolling: "touch" as any, padding: "8px 12px 32px" }}>
           {isLoading ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {Array.from({ length: 14 }).map((_, i) => (
-                <div key={i} style={{ height: 44, borderRadius: 12, background: "rgba(255,255,255,0.05)" }} />
+            // Skeleton
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, paddingTop: 8 }}>
+              {Array.from({ length: 16 }).map((_, i) => (
+                <div key={i} style={{
+                  height: 44, borderRadius: 10,
+                  background: "rgba(255,255,255,0.05)",
+                  animation: "pulse 1.4s ease-in-out infinite",
+                }} />
               ))}
             </div>
           ) : genres.length === 0 ? (
@@ -97,41 +110,45 @@ function GenreSheet({ onClose }: { onClose: () => void }) {
               <p style={{ color: "#6b7280", fontSize: 14, marginBottom: 12 }}>Genre tidak tersedia</p>
               <button
                 onClick={() => refetch()}
-                style={{ padding: "8px 20px", background: "#7c3aed", color: "#fff", border: "none", borderRadius: 8, fontSize: 14, cursor: "pointer" }}
+                style={{
+                  padding: "8px 20px", background: "#7c3aed", color: "#fff",
+                  border: "none", borderRadius: 8, fontSize: 14, cursor: "pointer"
+                }}
               >
                 Muat Ulang
               </button>
             </div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 6, paddingBottom: 32 }}>
+            // Genre list — dua kolom, 100% inline style
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: 8,
+              paddingTop: 8,
+            }}>
               {genres.map((g: any, i: number) => {
                 const id = String(g.genreId || g.slug || g.id || i);
                 const name = String(g.title || g.name || id);
-                const color = GENRE_COLORS[i % GENRE_COLORS.length];
+                const iconColor = ICON_COLORS[i % ICON_COLORS.length];
                 return (
                   <Link
                     key={`${id}-${i}`}
                     to={`/genre/${id}`}
                     onClick={onClose}
                     style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      padding: "10px 12px",
-                      borderRadius: 12,
-                      background: color.bg,
-                      border: `1px solid ${color.border}`,
-                      textDecoration: "none",
-                      transition: "opacity 0.15s",
+                      display: "flex", alignItems: "center", gap: 8,
+                      padding: "10px 12px", borderRadius: 10, textDecoration: "none",
+                      backgroundColor: "rgba(255,255,255,0.04)",
+                      border: "1px solid rgba(255,255,255,0.07)",
                     }}
                   >
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-                      <Tag style={{ width: 14, height: 14, flexShrink: 0, color: color.text }} />
-                      <span style={{ fontSize: 14, fontWeight: 500, color: "#e5e7eb", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {name}
-                      </span>
-                    </div>
-                    <ChevronRight style={{ width: 14, height: 14, flexShrink: 0, color: "#4b5563" }} />
+                    <Tag style={{ width: 13, height: 13, flexShrink: 0, color: iconColor }} />
+                    <span style={{
+                      fontSize: 13, fontWeight: 500, color: "#d1d5db",
+                      overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                    }}>
+                      {name}
+                    </span>
                   </Link>
                 );
               })}
@@ -141,13 +158,19 @@ function GenreSheet({ onClose }: { onClose: () => void }) {
       </div>
 
       <style>{`
-        @keyframes slideUp {
-          from { transform: translateY(100%); opacity: 0; }
-          to { transform: translateY(0); opacity: 1; }
+        @keyframes sheetUp {
+          from { transform: translateY(100%); }
+          to   { transform: translateY(0); }
+        }
+        @keyframes pulse {
+          0%, 100% { opacity: 0.5; }
+          50% { opacity: 1; }
         }
       `}</style>
     </div>
   );
+
+  return createPortal(popup, document.body);
 }
 
 export default function Search() {
@@ -201,7 +224,7 @@ export default function Search() {
           </div>
         </div>
 
-        {/* Genre Button */}
+        {/* Genre Button — static Tailwind class, aman */}
         <button
           onClick={() => setShowGenre(true)}
           className="w-full flex items-center justify-between px-4 py-3 mb-5 bg-[#1a1a2e] border border-white/10 rounded-xl hover:border-purple-500/30 active:scale-[0.99] transition-all"
@@ -218,7 +241,7 @@ export default function Search() {
           <ChevronRight className="w-4 h-4 text-gray-500 flex-shrink-0" />
         </button>
 
-        {/* Idle state */}
+        {/* Popular keywords */}
         {!debouncedQuery && (
           <div>
             <h2 className="text-sm font-medium text-gray-400 mb-3">Pencarian Populer</h2>
@@ -268,7 +291,9 @@ export default function Search() {
         )}
       </main>
 
-      {showGenre && <GenreSheet onClose={() => setShowGenre(false)} />}
+      {/* Genre Popup — rendered via Portal ke document.body */}
+      {showGenre && <GenrePopup onClose={() => setShowGenre(false)} />}
+
       <BottomNav />
     </div>
   );
