@@ -152,17 +152,6 @@ export default function VideoPlayer({ defaultUrl, qualities, resumeTime, onTimeU
           onLoad={() => setLoading(false)}
         />
       )}
-      {/* Custom fullscreen button — satu tombol, pojok kanan bawah */}
-      {embedUrl && !loading && !error && (
-        <button
-          onClick={handleFullscreen}
-          className="absolute bottom-3 right-3 z-20 p-1.5 rounded-md bg-black/60 hover:bg-black/80 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-          title="Layar Penuh"
-          aria-label="Layar Penuh"
-        >
-          <Maximize className="w-4 h-4" />
-        </button>
-      )}
     </div>
   );
 }
