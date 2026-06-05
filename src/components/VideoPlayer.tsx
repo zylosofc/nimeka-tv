@@ -59,15 +59,21 @@ async function findDirectStream(qualities: QualityServer[]): Promise<{ url: stri
     servers: q.serverList.map(s => s.title)
   })));
 
-  // Coba semua server dari quality tertinggi, tanpa filter keyword
+  // Fetch semua server PARALLEL per quality — lebih cepat
   for (const q of sorted) {
-    for (const s of q.serverList) {
-      const url = await fetchStreamUrl(s.serverId);
-      console.log(`Trying ${q.title} / ${s.title}:`, url?.slice(0, 80));
-      if (url && isDirectStream(url)) {
-        console.log("✅ Direct stream:", q.title, s.title, url.slice(0, 80));
-        return { url, label: q.title };
-      }
+    const results = await Promise.allSettled(
+      q.serverList.map(async s => {
+        const url = await fetchStreamUrl(s.serverId);
+        if (url && isDirectStream(url)) return { url, label: q.title };
+        return null;
+      })
+    );
+    const found = results
+      .filter(r => r.status === "fulfilled" && r.value !== null)
+      .map(r => (r as PromiseFulfilledResult<{ url: string; label: string }>).value)[0];
+    if (found) {
+      console.log("✅ Direct stream:", found.label, found.url.slice(0, 80));
+      return found;
     }
   }
   // Kalau ga ada direct stream, return URL pertama yang berhasil (fallback ke iframe)
@@ -185,7 +191,7 @@ export default function VideoPlayer({ defaultUrl, qualities, resumeTime, onTimeU
             autoPlay={false}
             playsInline
             className="w-full h-full"
-            style={{ objectFit: "contain", background: "#000" }}
+            style={{ objectFit: "cover", background: "#000" }}
             onLoadedData={() => setLoading(false)}
             onError={() => {
               // Fallback ke iframe kalau video gagal load
