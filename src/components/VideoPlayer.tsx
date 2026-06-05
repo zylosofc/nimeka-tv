@@ -43,11 +43,15 @@ function pickBestServer(qualities: QualityServer[]): ServerItem | null {
 
 async function fetchEmbedUrl(serverId: string): Promise<string | null> {
   try {
-    const res = await fetch(`/trpc/anime.server?input=${encodeURIComponent(JSON.stringify({ serverId }))}`);
+    const res = await fetch(`/api/trpc/anime.server?input=${encodeURIComponent(JSON.stringify({ json: { serverId } }))}`);
     if (!res.ok) return null;
     const json = await res.json();
-    return json?.result?.data?.url || json?.data?.url || null;
-  } catch {
+    const url = json?.result?.data?.json?.url || json?.result?.data?.url || json?.data?.url || null;
+    console.log("=== STREAM URL ===", url);
+    console.log("=== RAW RESPONSE ===", JSON.stringify(json).slice(0, 300));
+    return url;
+  } catch (e) {
+    console.log("=== FETCH ERROR ===", e);
     return null;
   }
 }
